@@ -109,48 +109,6 @@
             width: 100%;
             max-width: 150px;
         }
-
-        .floating-pagination {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 50;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .page-circle {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #1e293b;
-            border: 2px solid #334155;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Noto Sans TC', sans-serif;
-            transition: background 0.2s ease;
-        }
-
-        .page-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid #334155;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            transition: all 0.2s ease;
-        }
-        .page-btn:hover:not(:disabled) {
-            background: #334155;
-            color: #fff;
-        }
-        .page-btn:disabled { opacity: 0.1; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -279,10 +237,15 @@
         }) => {
             const addedByColor = nameColorMap[g.addedBy] || '#818cf8';
             return (
-                <tr onDragOver={(e)=>e.preventDefault()} onDrop={() => !isEditLocked && onDrop(index, g.parentId || "")} onDoubleClick={()=>(!isEditLocked && onOpenEdit(g))} className={`hover:bg-white/[0.03] border-b border-white/5 group transition-colors ${draggedId === g.id ? 'dragging' : ''} ${isChild ? 'bg-black/20' : ''}`}>
+                <tr 
+                    onDragOver={(e)=>e.preventDefault()} 
+                    onDrop={(e) => { e.preventDefault(); if(!isEditLocked) onDrop(g.id, g.parentId || ""); }} 
+                    onDoubleClick={()=>(!isEditLocked && onOpenEdit(g))} 
+                    className={`hover:bg-white/[0.03] border-b border-white/5 group transition-colors ${draggedId === g.id ? 'dragging' : ''} ${isChild ? 'bg-black/20' : ''}`}
+                >
                     <td className="px-2 text-center" onClick={(e)=>e.stopPropagation()}>
                         <div className="flex flex-col items-center gap-2">
-                            {!isEditLocked && <div draggable onDragStart={() => onStartDrag(g.id, index, g.parentId || "")} className="drag-handle p-2 text-slate-700 hover:text-cyan-400"><Icon name="grip-vertical" className="w-5 h-5" /></div>}
+                            {!isEditLocked && <div draggable onDragStart={(e) => onStartDrag(g.id, g.parentId || "")} className="drag-handle p-2 text-slate-700 hover:text-cyan-400"><Icon name="grip-vertical" className="w-5 h-5" /></div>}
                             {!isChild && hasChildren && <Icon name={isExpanded ? "chevron-down" : "chevron-right"} className="w-5 h-5 text-cyan-500" onClick={()=>onToggleGroup(g.id)} />}
                         </div>
                     </td>
@@ -339,7 +302,6 @@
                                             </div>
                                         ) : (!isEditLocked && <button onClick={() => onStatusUpdate(g.id, p.userId, { purchasePrice2: '0', purchaseCurrency2: (currencies[1] || 'RMB¥'), userName: p.userName })} className="w-10 h-full border border-dashed border-slate-800 rounded text-slate-700 hover:text-lime-500 hover:border-lime-500 font-black text-xs transition-all">+ $</button>)}
                                         
-                                        {/* 添加成員鍵 移到原本人員列垃圾桶位置 */}
                                         {!isEditLocked && <div onClick={(e) => { e.stopPropagation(); onAddPersonnel(g.id); }} className="w-7 h-7 flex items-center justify-center bg-slate-950/50 rounded border border-white/5 hover:bg-cyan-600 hover:text-black hover:border-cyan-400 transition-all cursor-pointer ml-auto" title="添加新成員"><Icon name="user-plus" className="w-4 h-4" /></div>}
                                     </div>
                                 ))}
@@ -359,7 +321,6 @@
         });
 
         function App() {
-            // --- 1. 先宣告所有 Refs 與基本狀態 ---
             const importInputRef = useRef(null);
             const fileInputRef = useRef(null);
 
@@ -389,14 +350,13 @@
             const [expandedGroups, setExpandedGroups] = useState(new Set());
             const [newPersonnelInput, setNewPersonnelInput] = useState({ gameId: null, name: '', manualName: '' });
             const [sortConfig, setSortConfig] = useState({ key: 'order', direction: 'asc' });
+            
             const [draggedId, setDraggedId] = useState(null);
-            const [draggedIdx, setDraggedIdx] = useState(null);
             const [draggedParentId, setDraggedParentId] = useState("");
+            
             const [activeFilter, setActiveFilter] = useState(null);
             const [isStatusSettingsOpen, setIsStatusSettingsOpen] = useState(false);
             const [isRateSettingsOpen, setIsRateSettingsOpen] = useState(false);
-            const [currentPage, setCurrentPage] = useState(1);
-            const ITEMS_PER_PAGE = 100;
 
             const [showNormalizeConfirm, setShowNormalizeConfirm] = useState(false);
             const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -412,7 +372,6 @@
             ]);
             const [rates, setRates] = useState([{ code: 'RMB¥', rate: 0.92 }, { code: 'РУБ₽', rate: 11.5 }, { code: 'INR₹', rate: 10.5 }]);
 
-            // --- 2. 功能函式定義 (Callbacks) ---
             const handleToggleGroup = useCallback((id) => setExpandedGroups(p => { const n = new Set(p); if(n.has(id)) n.delete(id); else n.add(id); return n; }), []);
             const handleSetFilter = useCallback((name, sid) => setActiveFilter(prev => { if (prev?.userName === name && prev?.statusId === sid) return null; return { userName: name, statusId: sid }; }), []);
             const closeModal = useCallback(() => { setFormData({ name: '', addedBy: '', price: '0', currency: 'HK$', url: '', cover: null, parentId: '' }); setEditingId(null); setIsModalOpen(false); }, []);
@@ -436,9 +395,8 @@
                     const statusSnap = await db.collection(paths.statuses).get();
                     const statusList = []; statusSnap.forEach(doc => statusList.push({ id: doc.id, ...doc.data() }));
                     setAllUserStatuses(statusList);
-                    const logSnap = await db.collection(paths.logs).limit(30).get();
+                    const logSnap = await db.collection(paths.logs).orderBy('timestamp', 'desc').limit(30).get();
                     const logList = []; logSnap.forEach(doc => logList.push({ id: doc.id, ...doc.data() }));
-                    logList.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
                     setActivityLogs(logList);
                     const labelDoc = await db.collection(paths.settings).doc('labels').get();
                     if (labelDoc.exists) setStatusLabels(labelDoc.data().list);
@@ -519,7 +477,7 @@
                     else { 
                         const siblings = games.filter(g => (g.parentId || "") === (formData.parentId || ""));
                         const nextOrder = siblings.length > 0 ? Math.max(...siblings.map(s => parseInt(s.order) || 0)) + 1 : 1;
-                        await db.collection(paths.games).add({ ...finalData, order: nextOrder, achievementTotal: 0, achievementCompleted: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
+                        await db.collection(paths.games).add({ ...finalData, order: nextOrder, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
                         logActivity("錄入", finalData.name); 
                     }
                     showNotify("已保存"); closeModal(); syncData(true);
@@ -569,22 +527,65 @@
                 reader.readAsText(file);
             };
 
-            const handleStartDrag = (id, idx, pId) => { setDraggedId(id); setDraggedIdx(idx); setDraggedParentId(pId); };
-
-            const handleDrop = async (targetIdx, targetParentId) => {
-                if (!db || !draggedId || draggedParentId !== targetParentId) return;
-                const batch = db.batch();
-                const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-                const siblings = games.filter(g => (g.parentId || "") === targetParentId).sort((a, b) => (a.order || 0) - (b.order || 0));
-                const newOrderList = [...siblings];
-                const [removed] = newOrderList.splice(draggedIdx, 1);
-                newOrderList.splice(targetIdx, 0, removed);
-                newOrderList.forEach((item, idx) => { batch.update(db.collection(paths.games).doc(item.id), { order: idx + 1 }); });
-                await batch.commit();
-                setDraggedId(null);
+            const handleClearAllData = async () => {
+                if (!db) return;
+                try {
+                    const gamesSnap = await db.collection(paths.games).get();
+                    const statusSnap = await db.collection(paths.statuses).get();
+                    const batch = db.batch();
+                    gamesSnap.forEach(doc => batch.delete(doc.ref));
+                    statusSnap.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    showNotify("所有雲端數據已清空");
+                    setShowClearConfirm(false);
+                    syncData(true);
+                } catch (e) { showNotify("操作失敗"); }
             };
 
-            // --- 6. 記憶化計算 (Memos) ---
+            // 修復拖動邏輯：改用 targetId 定位索引
+            const handleStartDrag = (id, pId) => { 
+                setDraggedId(id); 
+                setDraggedParentId(pId || ""); 
+            };
+
+            const handleDrop = async (targetId, targetParentId) => {
+                const tPId = targetParentId || "";
+                const dPId = draggedParentId || "";
+                
+                // 限制：只能在同一個父分組下（或同為根目錄）進行排序交換
+                if (!db || !draggedId || dPId !== tPId) return;
+                
+                const batch = db.batch();
+                // 獲取該層級的所有同伴，並按照當前 order 排序
+                const siblings = games
+                    .filter(g => (g.parentId || "") === tPId)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                
+                const newOrderList = [...siblings];
+                const draggedItemIdx = newOrderList.findIndex(g => g.id === draggedId);
+                const targetItemIdx = newOrderList.findIndex(g => g.id === targetId);
+                
+                if (draggedItemIdx === -1 || targetItemIdx === -1 || draggedItemIdx === targetItemIdx) return;
+                
+                // 執行陣列交換
+                const [removed] = newOrderList.splice(draggedItemIdx, 1);
+                newOrderList.splice(targetItemIdx, 0, removed);
+                
+                // 重新分配編號
+                newOrderList.forEach((item, idx) => { 
+                    batch.update(db.collection(paths.games).doc(item.id), { order: idx + 1 }); 
+                });
+                
+                try {
+                    await batch.commit();
+                    setDraggedId(null);
+                    setDraggedParentId("");
+                    syncData(true);
+                } catch (e) {
+                    showNotify("排序失敗");
+                }
+            };
+
             const currencies = useMemo(() => ['HK$', ...rates.map(r => r.code)], [rates]);
             const statusOptions = useMemo(() => statusLabels.map(l => ({ id: l.id, label: l.label })), [statusLabels]);
             
@@ -622,23 +623,27 @@
                 let list = [...games];
                 if (activeFilter) { const matchedIds = allUserStatuses.filter(s => s.userName === activeFilter.userName && s.status === activeFilter.statusId).map(s => s.gameId); list = list.filter(g => matchedIds.includes(g.id)); }
                 if (searchQuery.trim()) { const q = searchQuery.toLowerCase(); list = list.filter(g => (g.name || "").toLowerCase().includes(q)); }
+                
                 list.sort((a, b) => {
                     let valA = a[sortConfig.key]; let valB = b[sortConfig.key];
                     if (sortConfig.key === 'order') { valA = parseInt(valA)||0; valB = parseInt(valB)||0; } 
                     else { valA = (valA||"").toString().toLowerCase(); valB = (valB||"").toString().toLowerCase(); }
                     return valA < valB ? (sortConfig.direction === 'asc' ? -1 : 1) : (sortConfig.direction === 'asc' ? 1 : -1);
                 });
+                
                 const roots = list.filter(g => !g.parentId);
                 const children = {};
-                list.filter(g => g.parentId).forEach(g => { if (!children[g.parentId]) children[g.parentId] = []; children[g.parentId].push(g); });
-                Object.keys(children).forEach(pId => { children[pId].sort((a, b) => (parseInt(a.order)||0) - (parseInt(b.order)||0)); });
+                list.filter(g => g.parentId).forEach(g => { 
+                    if (!children[g.parentId]) children[g.parentId] = []; 
+                    children[g.parentId].push(g); 
+                });
+                
+                Object.keys(children).forEach(pId => { 
+                    children[pId].sort((a, b) => (parseInt(a.order)||0) - (parseInt(b.order)||0)); 
+                });
                 return { roots, children };
             }, [games, searchQuery, sortConfig, activeFilter, allUserStatuses]);
 
-            const paginatedRoots = useMemo(() => hierarchy.roots.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [hierarchy.roots, currentPage]);
-            const totalPages = Math.max(1, Math.ceil(hierarchy.roots.length / ITEMS_PER_PAGE));
-
-            // --- 7. 副作用 (Effects) ---
             useEffect(() => {
                 if (!isClient || !auth) return;
                 auth.signInAnonymously().then(u => setUser(u.user)).catch(() => {});
@@ -647,6 +652,7 @@
             useEffect(() => {
                 if (user) {
                     syncData();
+                    // 補回 1 小時定時器
                     const interval = setInterval(() => syncData(true), 3600000);
                     const unsubP = db.collection(paths.presence).onSnapshot(snap => {
                         const list = []; const now = Date.now();
@@ -686,23 +692,13 @@
                 window.addEventListener('paste', handlePaste); return () => window.removeEventListener('paste', handlePaste);
             }, [isModalOpen, showNotify]);
 
-            useEffect(() => { if (isClient && window.lucide) window.lucide.createIcons(); }, [games, isModalOpen, expandedGroups, isEditLocked, allMembersStats, achievementEdit, isRateSettingsOpen, onlineUsers, paginatedRoots, currentPage, totalPages, deleteGameTarget, deletePersonTarget, isSyncing, showNormalizeConfirm, showClearConfirm]);
+            useEffect(() => { if (isClient && window.lucide) window.lucide.createIcons(); }, [games, isModalOpen, expandedGroups, isEditLocked, allMembersStats, achievementEdit, isRateSettingsOpen, onlineUsers, hierarchy, deleteGameTarget, deletePersonTarget, isSyncing, showNormalizeConfirm, showClearConfirm]);
 
-            // --- 8. 渲染 ---
             return (
                 <div className={`min-h-screen p-4 md:p-8 relative text-white pb-12 ${isEditLocked ? 'mode-locked' : 'mode-edit'}`}>
                     <div className="fixed inset-0 z-[-1] opacity-20 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:40px_40px]"></div>
                     {notification && <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-cyan-500 text-black font-black px-6 py-2 rounded-full border-2 border-white shadow-2xl">{notification}</div>}
                     
-                    {/* 懸浮分頁 UI - 純數字不發光 */}
-                    {!isLoadingGames && (
-                        <div className="floating-pagination">
-                            <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}><Icon name="chevron-up" className="w-4 h-4" /></button>
-                            <div className="page-circle group relative"><span className="text-xl font-black text-white leading-none">{currentPage}</span></div>
-                            <button className="page-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}><Icon name="chevron-down" className="w-4 h-4" /></button>
-                        </div>
-                    )}
-
                     <div className="max-w-[1600px] mx-auto">
                         <header className="mb-8 flex items-center justify-between">
                             <div className="flex items-center gap-6">
@@ -797,7 +793,7 @@
                                         </tr>
                                     </thead>
                                     <tbody className="text-sm">
-                                        {isLoadingGames ? (<tr><td colSpan="9" className="py-24 text-center animate-pulse tracking-[0.3em]">SYNCHRONIZING...</td></tr>) : paginatedRoots.map((g, i) => (
+                                        {isLoadingGames ? (<tr><td colSpan="9" className="py-24 text-center animate-pulse tracking-[0.3em]">SYNCHRONIZING...</td></tr>) : hierarchy.roots.map((g, i) => (
                                             <React.Fragment key={g.id}>
                                                 <GameRow 
                                                     g={g} index={i} isChild={false} isEditLocked={isEditLocked} draggedId={draggedId} currencies={currencies}
@@ -832,7 +828,6 @@
                         </div>
                     </div>
 
-                    {/* 各種確認彈窗 */}
                     {deleteGameTarget && (
                         <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
                             <div className="bg-[#0b0e14] border border-red-500/50 w-full max-w-sm p-8 rounded shadow-2xl text-center">
