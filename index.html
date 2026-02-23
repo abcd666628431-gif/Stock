@@ -271,7 +271,7 @@
                             </div>
                             
                             {isNoteExpanded && g.note && (
-                                <div className="text-sm text-white/40 mt-1 max-w-[300px] break-words font-mono transition-all duration-300">
+                                <div className="text-sm text-white/40 mt-1 max-w-[400px] break-all whitespace-pre-wrap font-mono transition-all duration-300 text-left">
                                     {g.note}
                                 </div>
                             )}
@@ -1030,7 +1030,7 @@
                                                     </select>
                                                 </div>
                                                 <div className="modal-field-container items-start"><label className="text-[12px] font-black text-indigo-400 mt-2.5 uppercase tracking-widest">遊戲名稱</label><textarea required rows="2" placeholder="輸入名稱..." className="modal-input-base w-full text-lg font-black resize-none leading-snug" value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} /></div>
-                                                <div className="modal-field-container items-start"><label className="text-[12px] font-black text-indigo-400 mt-2.5 uppercase tracking-widest">備註設定</label><textarea rows="2" placeholder="輸入備註（灰色顯示）..." className="modal-input-base w-full text-sm font-bold resize-none leading-snug text-slate-400" value={formData.note} onChange={e=>setFormData({...formData, note: e.target.value})} /></div>
+                                                <div className="modal-field-container items-start"><label className="text-[12px] font-black text-indigo-400 mt-2.5 uppercase tracking-widest">備註設定</label><textarea rows="2" placeholder="輸入備註（自動換行）..." className="modal-input-base w-full text-sm font-bold resize-none leading-snug text-slate-400" value={formData.note} onChange={e=>setFormData({...formData, note: e.target.value})} /></div>
                                                 <div className="modal-field-container"><label className="text-[12px] font-black text-indigo-400 uppercase tracking-widest">商店網址</label><input className="modal-input-base w-full text-[10px] font-mono text-cyan-400" placeholder="https://store.steampowered.com/..." value={formData.url} onChange={e=>setFormData({...formData, url: e.target.value})} /></div>
                                                 <div className="modal-field-container"><label className="text-[12px] font-black text-indigo-400 uppercase tracking-widest">價格設定</label><div className="flex w-fit items-stretch rounded bg-black/40 border-b-2 border-slate-800"><select className="bg-transparent font-black text-indigo-400 outline-none p-2 text-sm appearance-none" value={formData.currency} onChange={e=>setFormData({...formData, currency: e.target.value})}>{currencies.map(c => <option key={c} value={c} className="bg-[#0b0e14]">{c}</option>)}</select><input type="number" placeholder="0" className="bg-transparent p-2 text-xl font-black outline-none text-white w-28" value={formData.price === '0' || formData.price === 0 ? '' : formData.price} onChange={e=>setFormData({...formData, price: e.target.value})} /></div></div>
                                             </div>
