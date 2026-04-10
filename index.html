@@ -148,7 +148,6 @@
           <!-- 頁籤導覽列 -->
           <div class="flex space-x-1 bg-slate-900 p-1 rounded-md mb-2 overflow-x-auto no-scrollbar">
             <button id="btn-tab-target" onclick="switchTab('target')" class="flex-1 min-w-max text-[11px] py-1 px-2 rounded bg-slate-700 text-white font-medium transition-colors">預期試算</button>
-            <button id="btn-tab-vol" onclick="switchTab('vol')" class="flex-1 min-w-max text-[11px] py-1 px-2 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors">支撐壓力</button>
             <button id="btn-tab-single" onclick="switchTab('single')" class="flex-1 min-w-max text-[11px] py-1 px-2 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors">單筆計算</button>
           </div>
 
@@ -184,42 +183,7 @@
               </div>
             </div>
             <!-- 動態顯示結果面板 -->
-            <div id="pnlResult" class="hidden mt-1.5 p-2 rounded-md border text-xs"></div>
-          </div>
-
-          <!-- Tab 2: 快速支撐壓力預測 -->
-          <div id="tab-vol" class="hidden space-y-1.5 px-0.5 pb-0.5">
-            <div>
-              <label class="block text-[11px] font-medium text-slate-400 mb-0.5">輸入震幅 (%) - 自動計算 ± 價格</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                  <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-                </div>
-                <input id="quickPercentInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-              </div>
-            </div>
-            <div id="quickPercentResult" class="hidden space-y-1.5">
-              <div class="p-2 rounded-md bg-emerald-900/20 border border-emerald-800/50">
-                <div class="flex justify-between items-center">
-                  <span class="text-[11px] font-medium text-emerald-400 flex items-center">上漲 <span id="quickUpPercentText" class="mx-0.5">0</span>%</span>
-                  <span id="quickUpPrice" class="font-bold text-xs text-emerald-400">0</span>
-                </div>
-                <div class="flex justify-between items-center border-t border-emerald-800/30 pt-1 mt-1">
-                  <span class="text-[10px] text-emerald-500/70">預估倉位總損益</span>
-                  <span id="quickUpPnl" class="font-bold text-[11px] text-emerald-400 flex items-center">0</span>
-                </div>
-              </div>
-              <div class="p-2 rounded-md bg-rose-900/20 border border-rose-800/50">
-                <div class="flex justify-between items-center">
-                  <span class="text-[11px] font-medium text-rose-400 flex items-center">下跌 <span id="quickDownPercentText" class="mx-0.5">0</span>%</span>
-                  <span id="quickDownPrice" class="font-bold text-xs text-rose-400">0</span>
-                </div>
-                <div class="flex justify-between items-center border-t border-rose-800/30 pt-1 mt-1">
-                  <span class="text-[10px] text-rose-500/70">預估倉位總損益</span>
-                  <span id="quickDownPnl" class="font-bold text-[11px] text-rose-400 flex items-center">0</span>
-                </div>
-              </div>
-            </div>
+            <div id="pnlResult" class="hidden mt-1.5 space-y-1.5"></div>
           </div>
 
           <!-- Tab 3: 獨立單筆計算 (不影響庫存) -->
@@ -330,7 +294,19 @@
         <!-- 官方 TradingView K線圖區塊 -->
         <div class="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700 flex flex-col">
           <div class="flex justify-between items-center mb-2">
-            <h2 id="chartTitle" class="text-sm font-semibold text-white">市場走勢圖 (請在左上角輸入代號並抓取)</h2>
+            <div class="flex items-center space-x-3">
+              <h2 id="chartTitle" class="text-sm font-semibold text-white">市場走勢圖</h2>
+              <select id="chartIntervalSelect" class="bg-slate-900 border border-slate-600 text-[11px] text-slate-300 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer">
+                <option value="1">1分</option>
+                <option value="5">5分</option>
+                <option value="15">15分</option>
+                <option value="30">30分</option>
+                <option value="60">1小時</option>
+                <option value="D" selected>日線</option>
+                <option value="W">週線</option>
+                <option value="M">月線</option>
+              </select>
+            </div>
             <span id="chartDateRange" class="text-[10px] text-slate-400"></span>
           </div>
           <!-- 加高圖表區塊高度，讓官方 TV 顯示更完整 -->
@@ -411,6 +387,7 @@
     let activeTargetMode = 'price'; 
     let quoteInterval = null; 
     let currentChartSymbol = ''; 
+    let currentChartInterval = localStorage.getItem('savedChartInterval_PRO') || 'D'; // 新增：記憶圖表週期
 
     // DOM 元素參考
     const els = {
@@ -430,15 +407,6 @@
       percentInput: document.getElementById('percentInput'),
       expectedPnlInput: document.getElementById('expectedPnlInput'),
       pnlResult: document.getElementById('pnlResult'),
-      
-      quickPercentInput: document.getElementById('quickPercentInput'),
-      quickPercentResult: document.getElementById('quickPercentResult'),
-      quickUpPercentText: document.getElementById('quickUpPercentText'),
-      quickUpPrice: document.getElementById('quickUpPrice'),
-      quickUpPnl: document.getElementById('quickUpPnl'),
-      quickDownPercentText: document.getElementById('quickDownPercentText'),
-      quickDownPrice: document.getElementById('quickDownPrice'),
-      quickDownPnl: document.getElementById('quickDownPnl'),
 
       singleCostInput: document.getElementById('singleCostInput'),
       singleSellInput: document.getElementById('singleSellInput'),
@@ -457,6 +425,7 @@
       currentPnlPercentDisp: document.getElementById('currentPnlPercentDisp'),
       
       chartTitle: document.getElementById('chartTitle'),
+      chartIntervalSelect: document.getElementById('chartIntervalSelect'),
       chartDateRange: document.getElementById('chartDateRange'),
       tvchartContainer: document.getElementById('tvchart'),
 
@@ -570,7 +539,7 @@
 
     // --- 頁籤切換邏輯 ---
     function switchTab(tabId) {
-      const tabs = ['target', 'vol', 'single'];
+      const tabs = ['target', 'single'];
       tabs.forEach(t => {
         const contentEl = document.getElementById(`tab-${t}`);
         if (contentEl) {
@@ -596,7 +565,7 @@
     }
 
     // --- 渲染官方 TradingView Widget ---
-    function renderTradingViewWidget(symbol) {
+    function renderTradingViewWidget(symbol, interval) {
       if (typeof TradingView === 'undefined') return;
       
       // 清空先前的圖表
@@ -605,7 +574,7 @@
       new TradingView.widget({
         "autosize": true,
         "symbol": symbol,
-        "interval": "D",
+        "interval": interval,
         "timezone": "Asia/Taipei",
         "theme": "dark",
         "style": "1",
@@ -620,12 +589,22 @@
         "toolbar_bg": "rgba(15, 23, 42, 1)",
       });
       
-      els.chartTitle.textContent = `${symbol} 專業即時圖表 (TradingView 官方提供)`;
+      els.chartTitle.textContent = `${symbol} 專業即時圖表`;
       els.chartDateRange.textContent = "免 API Key / 永不報錯";
       
       // 記錄當前圖表的代號
       currentChartSymbol = symbol;
     }
+
+    // --- 監聽圖表週期切換 ---
+    els.chartIntervalSelect.addEventListener('change', (e) => {
+      currentChartInterval = e.target.value;
+      localStorage.setItem('savedChartInterval_PRO', currentChartInterval);
+      // 如果目前已有載入圖表，立刻切換並重新渲染
+      if (currentChartSymbol) {
+        renderTradingViewWidget(currentChartSymbol, currentChartInterval);
+      }
+    });
 
     // --- 抓取邏輯 (圖表用TV, 報價用Finnhub) ---
     async function fetchStockData() {
@@ -644,7 +623,7 @@
       // 1. 只有在「更換標的」時，才重新載入 TradingView 官方圖表
       // 這樣可以保留使用者切換的時間週期(如 15m, 1h) 與畫線紀錄！
       if (symbol !== currentChartSymbol) {
-        renderTradingViewWidget(symbol);
+        renderTradingViewWidget(symbol, currentChartInterval);
       }
 
       // 2. 抓取 Finnhub 即時報價 (計算器使用)
@@ -751,7 +730,6 @@
         targetPrice: els.targetPriceInput.value,
         percentInput: els.percentInput.value,
         expectedPnl: els.expectedPnlInput.value,
-        quickPercent: els.quickPercentInput.value,
         singleCost: els.singleCostInput.value,
         singleSell: els.singleSellInput.value,
         singleQty: els.singleQtyInput.value,
@@ -777,7 +755,6 @@
           els.targetPriceInput.value = appState.targetPrice || '';
           if (appState.percentInput !== undefined) els.percentInput.value = appState.percentInput;
           if (appState.expectedPnl !== undefined) els.expectedPnlInput.value = appState.expectedPnl;
-          els.quickPercentInput.value = appState.quickPercent || '';
           els.singleCostInput.value = appState.singleCost || '';
           els.singleSellInput.value = appState.singleSell || '';
           els.singleQtyInput.value = appState.singleQty || '';
@@ -789,6 +766,9 @@
         }
       }
       
+      // 載入儲存的圖表週期
+      els.chartIntervalSelect.value = currentChartInterval;
+
       // 載入歷史紀錄
       const savedHist = localStorage.getItem('stockCalcHistory_PRO');
       if (savedHist) {
@@ -824,16 +804,14 @@
       els.targetPriceInput.disabled = isDisabled;
       els.percentInput.disabled = isDisabled;
       els.expectedPnlInput.disabled = isDisabled;
-      els.quickPercentInput.disabled = isDisabled;
 
       calculatePnl();
-      calculateQuickPercent();
       renderTable();
       updateCurrentPriceColor(); 
       saveData();
     }
 
-    // --- 解除三向連動的獨立試算邏輯 ---
+    // --- 解除三向連動的獨立試算邏輯 (加入正負雙向預測) ---
     els.targetPriceInput.addEventListener('input', () => { activeTargetMode = 'price'; calculatePnl(); });
     els.percentInput.addEventListener('input', () => { activeTargetMode = 'percent'; calculatePnl(); });
     els.expectedPnlInput.addEventListener('input', () => { activeTargetMode = 'pnl'; calculatePnl(); });
@@ -844,31 +822,92 @@
         return;
       }
       
-      let calcPrice = 0, calcPercent = 0, calcPnl = 0;
+      let resultHtml = '';
       let isValid = false;
+      
+      els.pnlResult.className = `mt-1.5 space-y-1.5`;
 
       if (activeTargetMode === 'price') {
         const val = parseFloat(els.targetPriceInput.value);
         if (!isNaN(val) && val > 0) {
-          calcPrice = val;
-          calcPnl = (calcPrice - averagePrice) * totalShares;
-          calcPercent = ((calcPrice - averagePrice) / averagePrice) * 100;
+          const calcPnl = (val - averagePrice) * totalShares;
+          const calcPercent = ((val - averagePrice) / averagePrice) * 100;
+          const isPositive = calcPnl >= 0;
+          const colorClass = isPositive ? 'text-emerald-400' : 'text-rose-400';
+          const bgClass = isPositive ? 'bg-emerald-900/20 border-emerald-800/50' : 'bg-rose-900/20 border-rose-800/50';
+          const prefix = calcPnl > 0 ? '+' : '';
+          
+          resultHtml = `
+            <div class="p-2 rounded-md border text-xs ${bgClass}">
+              <div class="flex justify-between items-center mb-0.5"><span class="text-[11px] font-medium text-slate-400">預估損益</span><span class="flex items-center font-bold ${colorClass}">${isPositive ? svgIconUp : svgIconDown} ${prefix}${formatNumber(calcPnl)}</span></div>
+              <div class="flex justify-between items-center"><span class="text-[11px] font-medium text-slate-400">報酬率</span><span class="font-bold ${colorClass}">${prefix}${formatNumber(calcPercent)}%</span></div>
+            </div>`;
           isValid = true;
         }
       } else if (activeTargetMode === 'percent') {
-        const val = parseFloat(els.percentInput.value);
+        let val = parseFloat(els.percentInput.value);
         if (!isNaN(val)) {
-          calcPercent = val;
-          calcPrice = averagePrice * (1 + (calcPercent / 100));
-          calcPnl = (calcPrice - averagePrice) * totalShares;
+          val = Math.abs(val); // 強制取正數來做雙向試算
+          const upPrice = averagePrice * (1 + (val / 100));
+          const downPrice = averagePrice * (1 - (val / 100));
+          const upPnl = (upPrice - averagePrice) * totalShares;
+          const downPnl = (downPrice - averagePrice) * totalShares;
+          
+          resultHtml = `
+            <div class="p-2 rounded-md bg-emerald-900/20 border border-emerald-800/50 text-xs">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-medium text-emerald-400 flex items-center">上漲 ${val}%</span>
+                <span class="font-bold text-emerald-400">${formatNumber(upPrice, 4)}</span>
+              </div>
+              <div class="flex justify-between items-center border-t border-emerald-800/30 pt-1 mt-1">
+                <span class="text-[10px] text-emerald-500/70">預估倉位總損益</span>
+                <span class="font-bold text-[11px] text-emerald-400 flex items-center">${svgIconUp} +${formatNumber(upPnl)}</span>
+              </div>
+            </div>
+            <div class="p-2 rounded-md bg-rose-900/20 border border-rose-800/50 text-xs">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-medium text-rose-400 flex items-center">下跌 ${val}%</span>
+                <span class="font-bold text-rose-400">${formatNumber(downPrice, 4)}</span>
+              </div>
+              <div class="flex justify-between items-center border-t border-rose-800/30 pt-1 mt-1">
+                <span class="text-[10px] text-rose-500/70">預估倉位總損益</span>
+                <span class="font-bold text-[11px] text-rose-400 flex items-center">${svgIconDown} ${formatNumber(downPnl)}</span>
+              </div>
+            </div>
+          `;
           isValid = true;
         }
       } else if (activeTargetMode === 'pnl') {
-        const val = parseFloat(els.expectedPnlInput.value);
+        let val = parseFloat(els.expectedPnlInput.value);
         if (!isNaN(val)) {
-          calcPnl = val;
-          calcPrice = averagePrice + (calcPnl / totalShares);
-          calcPercent = ((calcPrice - averagePrice) / averagePrice) * 100;
+          val = Math.abs(val); // 強制取正數來做雙向試算
+          const upPrice = averagePrice + (val / totalShares);
+          const downPrice = averagePrice - (val / totalShares);
+          const upPercent = ((upPrice - averagePrice) / averagePrice) * 100;
+          const downPercent = ((downPrice - averagePrice) / averagePrice) * 100;
+          
+          resultHtml = `
+            <div class="p-2 rounded-md bg-emerald-900/20 border border-emerald-800/50 text-xs">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-medium text-emerald-400 flex items-center">獲利 +${formatNumber(val)}</span>
+                <span class="font-bold text-emerald-400">需達 ${formatNumber(upPrice, 4)}</span>
+              </div>
+              <div class="flex justify-between items-center border-t border-emerald-800/30 pt-1 mt-1">
+                <span class="text-[10px] text-emerald-500/70">需上漲</span>
+                <span class="font-bold text-[11px] text-emerald-400 flex items-center">${svgIconUp} +${formatNumber(upPercent)}%</span>
+              </div>
+            </div>
+            <div class="p-2 rounded-md bg-rose-900/20 border border-rose-800/50 text-xs">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-medium text-rose-400 flex items-center">虧損 -${formatNumber(val)}</span>
+                <span class="font-bold text-rose-400">跌至 ${formatNumber(downPrice, 4)}</span>
+              </div>
+              <div class="flex justify-between items-center border-t border-rose-800/30 pt-1 mt-1">
+                <span class="text-[10px] text-rose-500/70">需下跌</span>
+                <span class="font-bold text-[11px] text-rose-400 flex items-center">${svgIconDown} ${formatNumber(downPercent)}%</span>
+              </div>
+            </div>
+          `;
           isValid = true;
         }
       }
@@ -879,26 +918,6 @@
       }
       
       els.pnlResult.classList.remove('hidden');
-      const isPositive = calcPnl >= 0;
-      els.pnlResult.className = `mt-1.5 p-2 rounded-md border text-xs ${isPositive ? 'bg-emerald-900/20 border-emerald-800/50' : 'bg-rose-900/20 border-rose-800/50'}`;
-      
-      const colorClass = isPositive ? 'text-emerald-400' : 'text-rose-400';
-      const prefix = calcPnl > 0 ? '+' : '';
-      
-      let resultHtml = '';
-      if (activeTargetMode === 'price') {
-        resultHtml = `
-          <div class="flex justify-between items-center mb-0.5"><span class="text-[11px] font-medium text-slate-400">預估損益</span><span class="flex items-center font-bold ${colorClass}">${isPositive ? svgIconUp : svgIconDown} ${prefix}${formatNumber(calcPnl)}</span></div>
-          <div class="flex justify-between items-center"><span class="text-[11px] font-medium text-slate-400">報酬率</span><span class="font-bold ${colorClass}">${prefix}${formatNumber(calcPercent)}%</span></div>`;
-      } else if (activeTargetMode === 'percent') {
-        resultHtml = `
-          <div class="flex justify-between items-center mb-0.5"><span class="text-[11px] font-medium text-slate-400">到達目標價</span><span class="font-bold ${colorClass}">${formatNumber(calcPrice, 4)}</span></div>
-          <div class="flex justify-between items-center"><span class="text-[11px] font-medium text-slate-400">預估損益</span><span class="flex items-center font-bold ${colorClass}">${isPositive ? svgIconUp : svgIconDown} ${prefix}${formatNumber(calcPnl)}</span></div>`;
-      } else if (activeTargetMode === 'pnl') {
-        resultHtml = `
-          <div class="flex justify-between items-center mb-0.5"><span class="text-[11px] font-medium text-slate-400">需到達目標價</span><span class="font-bold ${colorClass}">${formatNumber(calcPrice, 4)}</span></div>
-          <div class="flex justify-between items-center"><span class="text-[11px] font-medium text-slate-400">需上漲/下跌</span><span class="font-bold ${colorClass}">${prefix}${formatNumber(calcPercent)}%</span></div>`;
-      }
       els.pnlResult.innerHTML = resultHtml;
     }
 
@@ -939,49 +958,6 @@
     els.singleCostInput.addEventListener('input', calculateSingleTrade);
     els.singleSellInput.addEventListener('input', calculateSingleTrade);
     els.singleQtyInput.addEventListener('input', calculateSingleTrade);
-
-    function calculateQuickPercent() {
-      const val = els.quickPercentInput.value;
-      if (val === '' || val === '-' || totalShares === 0) {
-        els.quickPercentResult.classList.add('hidden');
-        return;
-      }
-      const percent = Math.abs(parseFloat(val));
-      if (!isNaN(percent) && averagePrice > 0) {
-        els.quickPercentResult.classList.remove('hidden');
-        
-        const upPrice = averagePrice * (1 + (percent / 100));
-        const downPrice = averagePrice * (1 - (percent / 100));
-        
-        els.quickUpPercentText.textContent = percent;
-        els.quickDownPercentText.textContent = percent;
-        els.quickUpPrice.textContent = formatNumber(upPrice, 4);
-        els.quickDownPrice.textContent = formatNumber(downPrice, 4);
-
-        // 盈虧計算邏輯
-        const upPnl = (upPrice * totalShares) - totalCost;
-        const downPnl = (downPrice * totalShares) - totalCost;
-        
-        const upIsPos = upPnl >= 0;
-        const downIsPos = downPnl >= 0;
-        
-        const upColor = upIsPos ? 'text-emerald-400' : 'text-rose-400';
-        const downColor = downIsPos ? 'text-emerald-400' : 'text-rose-400';
-        
-        const upPrefix = upPnl > 0 ? '+' : '';
-        const downPrefix = downPnl > 0 ? '+' : '';
-
-        els.quickUpPnl.className = `font-bold text-[11px] flex items-center ${upColor}`;
-        els.quickUpPnl.innerHTML = `${upIsPos ? svgIconUp : svgIconDown} ${upPrefix}${formatNumber(upPnl)} (${upPrefix}${formatNumber((upPnl/totalCost)*100)}%)`;
-        
-        els.quickDownPnl.className = `font-bold text-[11px] flex items-center ${downColor}`;
-        els.quickDownPnl.innerHTML = `${downIsPos ? svgIconUp : svgIconDown} ${downPrefix}${formatNumber(downPnl)} (${downPrefix}${formatNumber((downPnl/totalCost)*100)}%)`;
-
-      } else {
-        els.quickPercentResult.classList.add('hidden');
-      }
-    }
-    els.quickPercentInput.addEventListener('input', calculateQuickPercent);
 
     function updateCurrentPriceColor() {
       const val = parseFloat(els.currentPriceDisp.value);
@@ -1068,7 +1044,7 @@
     els.clearBtn.addEventListener('click', () => {
       if (window.confirm('確定清空所有當前紀錄？(歷史紀錄不會被刪除)')) {
         records = [];
-        ['targetPriceInput', 'percentInput', 'expectedPnlInput', 'quickPercentInput', 'currentPriceDisp', 'singleCostInput', 'singleSellInput', 'singleQtyInput'].forEach(id => els[id].value = '');
+        ['targetPriceInput', 'percentInput', 'expectedPnlInput', 'currentPriceDisp', 'singleCostInput', 'singleSellInput', 'singleQtyInput'].forEach(id => els[id].value = '');
         activeTargetMode = 'price';
         calculateCore();
         calculateSingleTrade();
