@@ -343,6 +343,7 @@
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="bg-slate-900/50 text-slate-400 text-xs border-b border-slate-700">
+                  <th class="px-4 py-2 font-medium">代號</th>
                   <th class="px-4 py-2 font-medium">數量</th>
                   <th class="px-4 py-2 font-medium">買入價位</th>
                   <th class="px-4 py-2 font-medium">小計成本</th>
@@ -361,7 +362,7 @@
               <thead class="sticky top-0 z-10">
                 <tr class="bg-slate-900/90 backdrop-blur-sm text-slate-400 text-xs border-b border-slate-700">
                   <th class="px-4 py-2 font-medium">時間</th>
-                  <th class="px-4 py-2 font-medium">標的</th>
+                  <th class="px-4 py-2 font-medium">代號</th>
                   <th class="px-4 py-2 font-medium">數量</th>
                   <th class="px-4 py-2 font-medium">買入價位</th>
                   <th class="px-4 py-2 font-medium text-right">操作</th>
@@ -931,10 +932,17 @@
       const quantity = parseFloat(els.qtyInput.value);
       if (isNaN(price) || price <= 0 || isNaN(quantity) || quantity <= 0) return alert('請輸入有效數字');
 
-      records.push({ id: Date.now().toString(), price: price, quantity: quantity, cost: price * quantity });
+      const tickerSym = els.tickerInput.value.toUpperCase().trim() || '-';
+
+      records.push({ 
+        id: Date.now().toString(), 
+        ticker: tickerSym, 
+        price: price, 
+        quantity: quantity, 
+        cost: price * quantity 
+      });
       
       // 同時寫入歷史建倉紀錄 (最多100筆)
-      const tickerSym = els.tickerInput.value.toUpperCase().trim() || '-';
       const now = new Date();
       const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
       
@@ -984,11 +992,12 @@
       }
       
       if (records.length === 0) {
-        els.recordsTableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">尚無建倉紀錄。</td></tr>`;
+        els.recordsTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">尚無建倉紀錄。</td></tr>`;
         return;
       }
       els.recordsTableBody.innerHTML = records.map(record => `
         <tr class="hover:bg-slate-700/30 transition-colors">
+          <td class="px-4 py-2 font-bold text-blue-400 text-xs">${record.ticker || '-'}</td>
           <td class="px-4 py-2 font-medium text-slate-200">${formatNumber(record.quantity)}</td>
           <td class="px-4 py-2 text-slate-300">${formatNumber(record.price, 4)}</td>
           <td class="px-4 py-2 text-slate-300">${formatNumber(record.cost)}</td>
