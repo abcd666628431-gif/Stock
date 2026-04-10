@@ -81,20 +81,24 @@
                 <input type="number" id="refreshIntervalInput" value="2" min="1" class="mx-1 w-8 text-center bg-slate-900 border border-slate-600 rounded text-white focus:ring-1 focus:ring-blue-500 no-scrollbar">
                 秒刷新
               </label>
-              <span class="text-[10px] text-emerald-400 font-normal border border-emerald-900 bg-emerald-900/20 px-1 rounded">Finnhub 🟢</span>
+              <span class="text-[10px] font-normal border border-emerald-900 bg-emerald-900/20 px-1.5 py-0.5 rounded cursor-help" title="API 連線狀態：正常">🟢</span>
             </div>
           </h2>
           <div class="flex gap-1.5">
-            <div class="relative flex-1">
+            <div class="relative flex-1" id="tickerInputContainer">
               <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
                 <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               </div>
               <input
                 id="tickerInput"
                 type="text"
+                autocomplete="off"
                 class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white uppercase-input"
                 placeholder="輸入代號 (例: AAPL)"
               >
+              <!-- 歷史紀錄下拉選單 -->
+              <div id="tickerDropdown" class="hidden absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-xl z-50 max-h-48 overflow-y-auto custom-scrollbar">
+              </div>
             </div>
             <button
               id="fetchBtn"
@@ -194,14 +198,26 @@
                 <input id="quickPercentInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed" disabled>
               </div>
             </div>
-            <div id="quickPercentResult" class="hidden space-y-1">
-              <div class="flex justify-between items-center px-2 py-1.5 rounded-md bg-emerald-900/20 border border-emerald-800/50">
-                <span class="text-[11px] font-medium text-emerald-400 flex items-center">上漲 <span id="quickUpPercentText" class="mx-0.5">0</span>%</span>
-                <span id="quickUpPrice" class="font-bold text-xs text-emerald-400">0</span>
+            <div id="quickPercentResult" class="hidden space-y-1.5">
+              <div class="p-2 rounded-md bg-emerald-900/20 border border-emerald-800/50">
+                <div class="flex justify-between items-center">
+                  <span class="text-[11px] font-medium text-emerald-400 flex items-center">上漲 <span id="quickUpPercentText" class="mx-0.5">0</span>%</span>
+                  <span id="quickUpPrice" class="font-bold text-xs text-emerald-400">0</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-emerald-800/30 pt-1 mt-1">
+                  <span class="text-[10px] text-emerald-500/70">預估倉位總損益</span>
+                  <span id="quickUpPnl" class="font-bold text-[11px] text-emerald-400 flex items-center">0</span>
+                </div>
               </div>
-              <div class="flex justify-between items-center px-2 py-1.5 rounded-md bg-rose-900/20 border border-rose-800/50">
-                <span class="text-[11px] font-medium text-rose-400 flex items-center">下跌 <span id="quickDownPercentText" class="mx-0.5">0</span>%</span>
-                <span id="quickDownPrice" class="font-bold text-xs text-rose-400">0</span>
+              <div class="p-2 rounded-md bg-rose-900/20 border border-rose-800/50">
+                <div class="flex justify-between items-center">
+                  <span class="text-[11px] font-medium text-rose-400 flex items-center">下跌 <span id="quickDownPercentText" class="mx-0.5">0</span>%</span>
+                  <span id="quickDownPrice" class="font-bold text-xs text-rose-400">0</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-rose-800/30 pt-1 mt-1">
+                  <span class="text-[10px] text-rose-500/70">預估倉位總損益</span>
+                  <span id="quickDownPnl" class="font-bold text-[11px] text-rose-400 flex items-center">0</span>
+                </div>
               </div>
             </div>
           </div>
@@ -387,6 +403,7 @@
     // 狀態變數
     let records = [];
     let tradeHistory = []; // 新增：歷史紀錄陣列
+    let savedTickers = JSON.parse(localStorage.getItem('savedTickers_PRO')) || []; // 新增：輸入過的代號紀錄
     let activeRecordsTab = 'current'; // 當前紀錄表格的頁籤
     let averagePrice = 0;
     let totalShares = 0;
@@ -398,6 +415,8 @@
     // DOM 元素參考
     const els = {
       apiKeyBtn: document.getElementById('apiKeyBtn'),
+      tickerInputContainer: document.getElementById('tickerInputContainer'),
+      tickerDropdown: document.getElementById('tickerDropdown'),
       tickerInput: document.getElementById('tickerInput'),
       fetchBtn: document.getElementById('fetchBtn'),
       autoRefreshCheckbox: document.getElementById('autoRefreshCheckbox'),
@@ -416,8 +435,10 @@
       quickPercentResult: document.getElementById('quickPercentResult'),
       quickUpPercentText: document.getElementById('quickUpPercentText'),
       quickUpPrice: document.getElementById('quickUpPrice'),
+      quickUpPnl: document.getElementById('quickUpPnl'),
       quickDownPercentText: document.getElementById('quickDownPercentText'),
       quickDownPrice: document.getElementById('quickDownPrice'),
+      quickDownPnl: document.getElementById('quickDownPnl'),
 
       singleCostInput: document.getElementById('singleCostInput'),
       singleSellInput: document.getElementById('singleSellInput'),
@@ -461,6 +482,55 @@
     const svgIconUp = `<svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`;
     const svgIconDown = `<svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
     const svgIconTrash = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
+
+    // --- 代號下拉選單邏輯 ---
+    function addSavedTicker(symbol) {
+      if (!symbol || symbol === '-') return;
+      savedTickers = savedTickers.filter(t => t !== symbol);
+      savedTickers.unshift(symbol);
+      if (savedTickers.length > 20) savedTickers.pop();
+      localStorage.setItem('savedTickers_PRO', JSON.stringify(savedTickers));
+    }
+
+    function renderTickerDropdown() {
+      if (savedTickers.length === 0) {
+        els.tickerDropdown.innerHTML = '<div class="px-3 py-2 text-xs text-slate-500 text-center">尚無紀錄</div>';
+        return;
+      }
+      els.tickerDropdown.innerHTML = savedTickers.map(t => `
+        <div class="flex justify-between items-center px-3 py-2 hover:bg-slate-700 cursor-pointer group transition-colors border-b border-slate-700/50 last:border-0" onclick="selectTicker('${t}')">
+          <span class="font-medium text-slate-200 text-xs">${t}</span>
+          <button onclick="removeSavedTicker('${t}', event)" class="text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded" title="刪除紀錄">
+            ${svgIconTrash}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    window.selectTicker = function(ticker) {
+      els.tickerInput.value = ticker;
+      els.tickerDropdown.classList.add('hidden');
+      fetchStockData();
+    };
+
+    window.removeSavedTicker = function(ticker, event) {
+      event.stopPropagation();
+      savedTickers = savedTickers.filter(t => t !== ticker);
+      localStorage.setItem('savedTickers_PRO', JSON.stringify(savedTickers));
+      renderTickerDropdown();
+      if (savedTickers.length === 0) els.tickerDropdown.classList.add('hidden');
+    };
+
+    els.tickerInput.addEventListener('focus', () => {
+      renderTickerDropdown();
+      els.tickerDropdown.classList.remove('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!els.tickerInputContainer.contains(e.target)) {
+        els.tickerDropdown.classList.add('hidden');
+      }
+    });
 
     // --- 歷史紀錄切換邏輯 ---
     window.switchRecordsTab = function(tab) {
@@ -564,6 +634,9 @@
         alert("請輸入股票代號！");
         return;
       }
+
+      // 儲存至搜尋紀錄
+      addSavedTicker(symbol);
 
       els.fetchBtn.textContent = "載入中..";
       els.fetchBtn.disabled = true;
@@ -876,10 +949,34 @@
       const percent = Math.abs(parseFloat(val));
       if (!isNaN(percent) && averagePrice > 0) {
         els.quickPercentResult.classList.remove('hidden');
+        
+        const upPrice = averagePrice * (1 + (percent / 100));
+        const downPrice = averagePrice * (1 - (percent / 100));
+        
         els.quickUpPercentText.textContent = percent;
         els.quickDownPercentText.textContent = percent;
-        els.quickUpPrice.textContent = formatNumber(averagePrice * (1 + (percent / 100)), 4);
-        els.quickDownPrice.textContent = formatNumber(averagePrice * (1 - (percent / 100)), 4);
+        els.quickUpPrice.textContent = formatNumber(upPrice, 4);
+        els.quickDownPrice.textContent = formatNumber(downPrice, 4);
+
+        // 盈虧計算邏輯
+        const upPnl = (upPrice * totalShares) - totalCost;
+        const downPnl = (downPrice * totalShares) - totalCost;
+        
+        const upIsPos = upPnl >= 0;
+        const downIsPos = downPnl >= 0;
+        
+        const upColor = upIsPos ? 'text-emerald-400' : 'text-rose-400';
+        const downColor = downIsPos ? 'text-emerald-400' : 'text-rose-400';
+        
+        const upPrefix = upPnl > 0 ? '+' : '';
+        const downPrefix = downPnl > 0 ? '+' : '';
+
+        els.quickUpPnl.className = `font-bold text-[11px] flex items-center ${upColor}`;
+        els.quickUpPnl.innerHTML = `${upIsPos ? svgIconUp : svgIconDown} ${upPrefix}${formatNumber(upPnl)} (${upPrefix}${formatNumber((upPnl/totalCost)*100)}%)`;
+        
+        els.quickDownPnl.className = `font-bold text-[11px] flex items-center ${downColor}`;
+        els.quickDownPnl.innerHTML = `${downIsPos ? svgIconUp : svgIconDown} ${downPrefix}${formatNumber(downPnl)} (${downPrefix}${formatNumber((downPnl/totalCost)*100)}%)`;
+
       } else {
         els.quickPercentResult.classList.add('hidden');
       }
@@ -995,9 +1092,13 @@
         els.recordsTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">尚無建倉紀錄。</td></tr>`;
         return;
       }
-      els.recordsTableBody.innerHTML = records.map(record => `
+      els.recordsTableBody.innerHTML = records.map(record => {
+        const tickerHtml = (record.ticker && record.ticker !== '-') 
+          ? `<span class="cursor-pointer hover:text-blue-300 hover:underline decoration-blue-400/50 decoration-dashed transition-all" onclick="selectTicker('${record.ticker}')">${record.ticker}</span>` 
+          : '-';
+        return `
         <tr class="hover:bg-slate-700/30 transition-colors">
-          <td class="px-4 py-2 font-bold text-blue-400 text-xs">${record.ticker || '-'}</td>
+          <td class="px-4 py-2 font-bold text-blue-400 text-xs">${tickerHtml}</td>
           <td class="px-4 py-2 font-medium text-slate-200">${formatNumber(record.quantity)}</td>
           <td class="px-4 py-2 text-slate-300">${formatNumber(record.price, 4)}</td>
           <td class="px-4 py-2 text-slate-300">${formatNumber(record.cost)}</td>
@@ -1005,7 +1106,7 @@
             <button onclick="deleteRecord('${record.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors" title="刪除">${svgIconTrash}</button>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     function renderHistoryTable() {
@@ -1018,17 +1119,21 @@
         els.historyTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">尚無歷史建倉紀錄。</td></tr>`;
         return;
       }
-      els.historyTableBody.innerHTML = tradeHistory.map(r => `
+      els.historyTableBody.innerHTML = tradeHistory.map(r => {
+        const tickerHtml = (r.ticker && r.ticker !== '-') 
+          ? `<span class="cursor-pointer hover:text-blue-300 hover:underline decoration-blue-400/50 decoration-dashed transition-all" onclick="selectTicker('${r.ticker}')">${r.ticker}</span>` 
+          : '-';
+        return `
         <tr class="hover:bg-slate-700/30 transition-colors">
           <td class="px-4 py-2 text-slate-400 text-[10px] whitespace-nowrap">${r.time}</td>
-          <td class="px-4 py-2 font-bold text-blue-400 text-xs">${r.ticker}</td>
+          <td class="px-4 py-2 font-bold text-blue-400 text-xs">${tickerHtml}</td>
           <td class="px-4 py-2 text-slate-200">${formatNumber(r.quantity)}</td>
           <td class="px-4 py-2 text-slate-300">${formatNumber(r.price, 4)}</td>
           <td class="px-4 py-2 text-right">
             <button onclick="deleteHistoryRecord('${r.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors" title="刪除">${svgIconTrash}</button>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
