@@ -95,6 +95,7 @@
             <div class="flex items-center space-x-2">
               <label class="flex items-center text-[10px] text-slate-400 cursor-pointer hover:text-white transition-colors">
                 <input type="checkbox" id="autoRefreshCheckbox" class="mr-1 rounded border-[#444] bg-[#2a2a2a] text-[#2979ff] focus:ring-0">
+                每
                 <input type="number" id="refreshIntervalInput" value="2" min="1" class="mx-1 w-7 text-center bg-transparent border-none p-0 text-[#2979ff] font-bold"> 秒刷新
               </label>
               <span class="text-[10px] font-normal cursor-help" title="連線正常">🟢</span>
@@ -271,16 +272,23 @@
   </div>
 
   <script>
-    let FINNHUB_API_KEY = localStorage.getItem('finnhub_saved_key_v3') || 'd730469r01qn7f075d8gd730469r01qn7f075d90';
+    // --- 儲存標籤定義 ---
+    const STORAGE_KEY_STATE = 'stockCalcStateHTML_PRO_V3';
+    const STORAGE_KEY_HISTORY = 'stockCalcHistory_PRO';
+    const STORAGE_KEY_TICKERS = 'savedTickers_PRO';
+    const STORAGE_KEY_INTERVAL = 'savedChartInterval_PRO';
+    const STORAGE_KEY_FINNHUB = 'finnhub_saved_key_v3';
+
+    let FINNHUB_API_KEY = localStorage.getItem(STORAGE_KEY_FINNHUB) || 'd730469r01qn7f075d8gd730469r01qn7f075d90';
 
     let records = [];
     let tradeHistory = [];
-    let savedTickers = JSON.parse(localStorage.getItem('savedTickers_PRO')) || [];
+    let savedTickers = JSON.parse(localStorage.getItem(STORAGE_KEY_TICKERS)) || [];
     let activeRecordsTab = 'current';
     let averagePrice = 0, totalShares = 0, totalCost = 0;
     let activeTargetMode = 'price'; 
     let quoteInterval = null, currentChartSymbol = ''; 
-    let currentChartInterval = localStorage.getItem('savedChartInterval_PRO') || 'D';
+    let currentChartInterval = localStorage.getItem(STORAGE_KEY_INTERVAL) || 'D';
 
     const els = {
       apiKeyBtn: document.getElementById('apiKeyBtn'),
@@ -329,12 +337,43 @@
     const svgIconDown = `<svg class="inline mr-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
     const svgIconTrash = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
 
+    // --- 資料加載與自動遷移邏輯 ---
+    function loadAndMigrateData() {
+      // 1. 嘗試讀取 V3 (當前版本)
+      let saved = JSON.parse(localStorage.getItem(STORAGE_KEY_STATE));
+      
+      // 2. 如果 V3 是空的，嘗試讀取 V2 並遷移
+      if (!saved || (!saved.records || saved.records.length === 0)) {
+        const oldSaved = JSON.parse(localStorage.getItem('stockCalcStateHTML_PRO_V2'));
+        if (oldSaved && oldSaved.records && oldSaved.records.length > 0) {
+          console.log("偵測到舊版本資料，正在執行遷移...");
+          saved = oldSaved;
+          // 立即存入 V3 以防丟失
+          localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(saved));
+        }
+      }
+
+      if (saved) {
+        records = saved.records || [];
+        els.tickerInput.value = saved.ticker || '';
+        els.currentPriceDisp.value = saved.currentPrice || '';
+        els.autoRefreshCheckbox.checked = saved.autoRefresh || false;
+        els.refreshIntervalInput.value = saved.refreshInterval || 2;
+      }
+
+      tradeHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY)) || [];
+      els.chartIntervalSelect.value = currentChartInterval;
+      
+      calculateCore();
+      renderHistoryTable();
+    }
+
     function addSavedTicker(symbol) {
       if (!symbol || symbol === '-') return;
       savedTickers = savedTickers.filter(t => t !== symbol);
       savedTickers.unshift(symbol);
       if (savedTickers.length > 20) savedTickers.pop();
-      localStorage.setItem('savedTickers_PRO', JSON.stringify(savedTickers));
+      localStorage.setItem(STORAGE_KEY_TICKERS, JSON.stringify(savedTickers));
     }
 
     function renderTickerDropdown() {
@@ -361,7 +400,7 @@
     window.removeSavedTicker = function(ticker, event) {
       event.stopPropagation();
       savedTickers = savedTickers.filter(t => t !== ticker);
-      localStorage.setItem('savedTickers_PRO', JSON.stringify(savedTickers));
+      localStorage.setItem(STORAGE_KEY_TICKERS, JSON.stringify(savedTickers));
       renderTickerDropdown();
     };
 
@@ -381,7 +420,7 @@
 
     els.apiKeyBtn.addEventListener('click', () => {
       const newKey = prompt('輸入 Finnhub API Key：', FINNHUB_API_KEY);
-      if (newKey) { FINNHUB_API_KEY = newKey.trim(); localStorage.setItem('finnhub_saved_key_v3', FINNHUB_API_KEY); }
+      if (newKey) { FINNHUB_API_KEY = newKey.trim(); localStorage.setItem(STORAGE_KEY_FINNHUB, FINNHUB_API_KEY); }
     });
 
     function switchTab(tabId) {
@@ -408,13 +447,14 @@
         "gridColor": "rgba(242, 242, 242, 0.06)",
         "hide_side_toolbar": true,
         "container_id": "tvchart",
+        "studies": ["PriceHighLow@tv-basicstudies"],
       });
       currentChartSymbol = symbol;
     }
 
     els.chartIntervalSelect.addEventListener('change', (e) => {
       currentChartInterval = e.target.value;
-      localStorage.setItem('savedChartInterval_PRO', currentChartInterval);
+      localStorage.setItem(STORAGE_KEY_INTERVAL, currentChartInterval);
       if (currentChartSymbol) renderTradingViewWidget(currentChartSymbol, currentChartInterval);
     });
 
@@ -454,7 +494,7 @@
     els.tickerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); fetchStockData(); }});
 
     function saveData() {
-      localStorage.setItem('stockCalcStateHTML_PRO_V3', JSON.stringify({
+      localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify({
         records, ticker: els.tickerInput.value, currentPrice: els.currentPriceDisp.value,
         autoRefresh: els.autoRefreshCheckbox.checked, refreshInterval: els.refreshIntervalInput.value
       }));
@@ -550,13 +590,13 @@
       records.push({ id: Date.now().toString(), ticker: s, price: p, quantity: q, cost: p * q });
       tradeHistory.unshift({ id: Date.now().toString()+'h', time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), ticker: s, price: p, quantity: q });
       if (tradeHistory.length > 100) tradeHistory.pop();
-      els.priceInput.value = ''; els.qtyInput.value = ''; calculateCore(); renderHistoryTable(); localStorage.setItem('stockCalcHistory_PRO', JSON.stringify(tradeHistory));
+      els.priceInput.value = ''; els.qtyInput.value = ''; calculateCore(); renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
     });
 
     window.deleteRecord = (id) => { records = records.filter(r => r.id !== id); calculateCore(); };
-    window.deleteHistoryRecord = (id) => { tradeHistory = tradeHistory.filter(r => r.id !== id); renderHistoryTable(); localStorage.setItem('stockCalcHistory_PRO', JSON.stringify(tradeHistory)); };
+    window.deleteHistoryRecord = (id) => { tradeHistory = tradeHistory.filter(r => r.id !== id); renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory)); };
     els.clearBtn.addEventListener('click', () => { if(confirm('清空當前紀錄？')) { records = []; calculateCore(); }});
-    els.clearHistoryBtn.addEventListener('click', () => { if(confirm('清空歷史？')) { tradeHistory = []; renderHistoryTable(); localStorage.setItem('stockCalcHistory_PRO', JSON.stringify(tradeHistory)); }});
+    els.clearHistoryBtn.addEventListener('click', () => { if(confirm('清空歷史？')) { tradeHistory = []; renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory)); }});
 
     function renderTable() {
       els.recordsTableBody.innerHTML = records.map(r => `
@@ -582,15 +622,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const saved = JSON.parse(localStorage.getItem('stockCalcStateHTML_PRO_V3'));
-      if (saved) { 
-        records = saved.records || []; els.tickerInput.value = saved.ticker || ''; els.currentPriceDisp.value = saved.currentPrice || '';
-        els.autoRefreshCheckbox.checked = saved.autoRefresh; els.refreshIntervalInput.value = saved.refreshInterval || 2;
+      // 執行資料加載與自動遷移
+      loadAndMigrateData();
+      
+      if(els.tickerInput.value) { 
+        fetchStockData(); 
+        if(els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); 
       }
-      tradeHistory = JSON.parse(localStorage.getItem('stockCalcHistory_PRO')) || [];
-      els.chartIntervalSelect.value = currentChartInterval;
-      calculateCore(); renderHistoryTable();
-      if(els.tickerInput.value) { fetchStockData(); if(els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); }
     });
   </script>
 </body>
