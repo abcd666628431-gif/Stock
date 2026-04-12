@@ -3,12 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>股票倉位與即時圖表計算器</title>
+  <title>股票倉位量化終端 Pro</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入 TradingView 官方免 API Key 圖表庫 -->
   <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <style>
+    body {
+      background-color: #0F0F0F;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* 深黑色系組件樣式 */
+    .card-panel {
+      background-color: #1e1e1e;
+      border: 1px solid #333;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    
+    input, select {
+      background-color: #2a2a2a !important;
+      border: 1px solid #444 !important;
+      color: white !important;
+    }
+    
+    input:focus, select:focus {
+      border-color: #2979ff !important;
+      outline: none;
+    }
+    
+    .btn-primary {
+      background-color: #2979ff;
+      transition: 0.3s;
+    }
+    
+    .btn-primary:hover {
+      background-color: #1c54b2;
+    }
+
     /* 隱藏數字輸入框預設的上下箭頭 */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
@@ -18,352 +51,217 @@
     input[type=number] {
       -moz-appearance: textfield;
     }
-    /* 強制輸入轉大寫 */
+    
     .uppercase-input { text-transform: uppercase; }
     
-    /* 隱藏捲軸但保留捲動功能 */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* 歷史紀錄的自訂細捲軸 */
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.5); 
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(51, 65, 85, 1); 
-      border-radius: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: rgba(71, 85, 105, 1); 
-    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0F0F0F; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-200 font-sans min-h-screen p-4 md:p-6">
+<body class="min-h-screen p-4 md:p-6">
 
   <div class="max-w-6xl mx-auto space-y-4">
     
     <!-- 標題區塊 -->
-    <header class="flex justify-between items-end pb-3 border-b border-slate-700">
-      <div class="flex items-center space-x-3">
-        <div class="bg-slate-800 border border-slate-700 p-2 rounded-lg shadow-lg flex items-center justify-center w-10 h-10 text-xl select-none">
+    <header class="flex justify-between items-center pb-3 border-b border-[#333]">
+      <div class="flex items-center space-x-4">
+        <div class="bg-[#1e1e1e] border border-[#333] p-2 rounded-lg shadow-lg flex items-center justify-center w-12 h-12 text-2xl select-none">
           📊
         </div>
         <div>
-          <h1 class="text-xl md:text-2xl font-bold text-white">股票倉位計算器 <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700 ml-2">PRO</span></h1>
-          <p class="text-slate-400 text-xs md:text-sm mt-0.5">即時 API 報價、TradingView K線圖、分批建倉與獨立損益試算</p>
+          <h1 class="text-xl md:text-2xl font-bold text-white tracking-tight">量化預測終端 <span class="text-xs font-normal text-[#2979ff] bg-[#2979ff]/10 px-2 py-0.5 rounded border border-[#2979ff]/30 ml-2">PRO</span></h1>
+          <p class="text-slate-500 text-xs md:text-sm mt-0.5">即時 API 數據採集、專業級 TradingView 繪圖、建倉成本精算</p>
         </div>
       </div>
-      <button id="apiKeyBtn" class="text-xs flex items-center bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-md transition-colors border border-slate-600 shadow-sm">
-        🔑 設定 API Key
+      <button id="apiKeyBtn" class="text-xs flex items-center bg-[#2a2a2a] hover:bg-[#333] text-slate-300 px-4 py-2 rounded-lg transition-colors border border-[#444] shadow-sm">
+        🔑 API Key 設置
       </button>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
       
-      <!-- 左側：輸入區與試算區 (佔比 1/4) -->
-      <div class="lg:col-span-1 space-y-2.5">
+      <!-- 左側：控制面板 -->
+      <div class="lg:col-span-1 space-y-3">
         
-        <!-- 板塊 1：API 即時抓價區塊 -->
-        <div class="bg-slate-800 p-2.5 rounded-lg shadow-lg border border-blue-900/50">
-          <h2 class="text-sm font-semibold mb-1.5 text-white flex justify-between items-center">
-            <span>即時美股報價</span>
+        <!-- API 抓價 -->
+        <div class="card-panel p-3 rounded-xl">
+          <div class="flex justify-between items-center mb-2">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">市場報價</h2>
             <div class="flex items-center space-x-2">
-              <label class="flex items-center text-[10px] text-slate-300 cursor-pointer hover:text-white transition-colors">
-                <input type="checkbox" id="autoRefreshCheckbox" class="mr-1 rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-blue-500">
-                每
-                <input type="number" id="refreshIntervalInput" value="2" min="1" class="mx-1 w-8 text-center bg-slate-900 border border-slate-600 rounded text-white focus:ring-1 focus:ring-blue-500 no-scrollbar">
-                秒刷新
+              <label class="flex items-center text-[10px] text-slate-400 cursor-pointer hover:text-white transition-colors">
+                <input type="checkbox" id="autoRefreshCheckbox" class="mr-1 rounded border-[#444] bg-[#2a2a2a] text-[#2979ff] focus:ring-0">
+                <input type="number" id="refreshIntervalInput" value="2" min="1" class="mx-1 w-7 text-center bg-transparent border-none p-0 text-[#2979ff] font-bold"> 秒刷新
               </label>
-              <span class="text-[10px] font-normal border border-emerald-900 bg-emerald-900/20 px-1.5 py-0.5 rounded cursor-help" title="API 連線狀態：正常">🟢</span>
+              <span class="text-[10px] font-normal cursor-help" title="連線正常">🟢</span>
             </div>
-          </h2>
-          <div class="flex gap-1.5">
+          </div>
+          <div class="flex gap-2">
             <div class="relative flex-1" id="tickerInputContainer">
-              <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              </div>
               <input
                 id="tickerInput"
                 type="text"
                 autocomplete="off"
-                class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white uppercase-input"
-                placeholder="輸入代號 (例: AAPL)"
+                class="w-full pl-3 pr-2 py-2 text-sm rounded-lg transition-all uppercase-input"
+                placeholder="代號 (如: AAPL)"
               >
-              <!-- 歷史紀錄下拉選單 -->
-              <div id="tickerDropdown" class="hidden absolute top-full left-0 w-full mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-xl z-50 max-h-48 overflow-y-auto custom-scrollbar">
-              </div>
+              <div id="tickerDropdown" class="hidden absolute top-full left-0 w-full mt-1 bg-[#1e1e1e] border border-[#333] rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar"></div>
             </div>
-            <button
-              id="fetchBtn"
-              class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-md transition-colors shadow-sm shadow-blue-900/40 whitespace-nowrap flex items-center disabled:opacity-50"
-            >
+            <button id="fetchBtn" class="btn-primary text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg disabled:opacity-50">
               抓取
             </button>
           </div>
         </div>
 
-        <!-- 板塊 2：新增交易紀錄表單 -->
-        <div class="bg-slate-800 p-2.5 rounded-lg shadow-lg border border-slate-700">
-          <h2 class="text-sm font-semibold mb-1.5 flex items-center text-white">
-            <svg class="mr-1.5 text-blue-400" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-            新增買入紀錄
+        <!-- 新增買入 -->
+        <div class="card-panel p-3 rounded-xl">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center">
+            <svg class="mr-2 text-[#2979ff]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            新增建倉紀錄
           </h2>
-          <form id="addForm" class="space-y-1.5">
-            <div class="grid grid-cols-2 gap-1.5">
+          <form id="addForm" class="space-y-2.5">
+            <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-[11px] font-medium text-slate-400 mb-0.5">買入數量 (股)</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                    <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-                  </div>
-                  <input id="qtyInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white" required>
-                </div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">數量 (股)</label>
+                <input id="qtyInput" type="number" step="any" class="w-full px-3 py-2 text-sm rounded-lg" required>
               </div>
               <div>
-                <label class="block text-[11px] font-medium text-slate-400 mb-0.5">買入價位</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                    <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                  </div>
-                  <input id="priceInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white" required>
-                </div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">價位</label>
+                <input id="priceInput" type="number" step="any" class="w-full px-3 py-2 text-sm rounded-lg" required>
               </div>
             </div>
-            <button type="submit" class="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-1.5 rounded-md transition-colors flex items-center justify-center border border-slate-600">
-              加入計算
+            <button type="submit" class="w-full bg-[#2a2a2a] hover:bg-[#333] text-white text-xs font-bold py-2 rounded-lg transition-colors border border-[#444]">
+              加入計算模型
             </button>
           </form>
         </div>
 
-        <!-- 板塊 3：整合式計算工具箱 (多頁籤) -->
-        <div class="bg-slate-800 p-2 rounded-lg shadow-lg border border-slate-700 flex flex-col">
-          
-          <!-- 頁籤導覽列 -->
-          <div class="flex space-x-1 bg-slate-900 p-1 rounded-md mb-2 overflow-x-auto no-scrollbar">
-            <button id="btn-tab-target" onclick="switchTab('target')" class="flex-1 min-w-max text-[11px] py-1 px-2 rounded bg-slate-700 text-white font-medium transition-colors">預期試算</button>
-            <button id="btn-tab-single" onclick="switchTab('single')" class="flex-1 min-w-max text-[11px] py-1 px-2 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors">單筆計算</button>
+        <!-- 試算工具 -->
+        <div class="card-panel p-2 rounded-xl flex flex-col">
+          <div class="flex space-x-1 bg-[#0F0F0F] p-1 rounded-lg mb-2">
+            <button id="btn-tab-target" onclick="switchTab('target')" class="flex-1 text-[11px] py-1.5 rounded-md bg-[#2979ff] text-white font-bold transition-all">預期試算</button>
+            <button id="btn-tab-single" onclick="switchTab('single')" class="flex-1 text-[11px] py-1.5 rounded-md text-slate-500 hover:text-slate-300 transition-all">單筆計算</button>
           </div>
 
-          <!-- Tab 1: 預期目標試算 (獨立不互相覆蓋) -->
-          <div id="tab-target" class="space-y-1.5 px-0.5 pb-0.5">
-            <div class="grid grid-cols-2 gap-1.5">
+          <div id="tab-target" class="space-y-2 px-1 pb-1">
+            <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-[11px] font-medium text-slate-400 mb-0.5">假設目標價</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                    <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                  </div>
-                  <input id="targetPriceInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                </div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">目標價</label>
+                <input id="targetPriceInput" type="number" step="any" class="w-full px-3 py-1.5 text-xs rounded-lg disabled:opacity-30" disabled>
               </div>
               <div>
-                <label class="block text-[11px] font-medium text-slate-400 mb-0.5">預期漲跌幅 (%)</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                    <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-                  </div>
-                  <input id="percentInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                </div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">漲跌幅 (%)</label>
+                <input id="percentInput" type="number" step="any" class="w-full px-3 py-1.5 text-xs rounded-lg disabled:opacity-30" disabled>
               </div>
             </div>
             <div>
-              <label class="block text-[11px] font-medium text-slate-400 mb-0.5">預期損益金額 (獨立反算)</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                  <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                </div>
-                <input id="expectedPnlInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-              </div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">損益金額</label>
+              <input id="expectedPnlInput" type="number" step="any" class="w-full px-3 py-1.5 text-xs rounded-lg disabled:opacity-30" disabled>
             </div>
-            <!-- 動態顯示結果面板 -->
-            <div id="pnlResult" class="hidden mt-1.5 space-y-1.5"></div>
+            <div id="pnlResult" class="hidden mt-2 space-y-2"></div>
           </div>
 
-          <!-- Tab 3: 獨立單筆計算 (不影響庫存) -->
-          <div id="tab-single" class="hidden space-y-1.5 px-0.5 pb-0.5">
-            <div class="grid grid-cols-2 gap-1.5">
-              <div>
-                <label class="block text-[11px] font-medium text-slate-400 mb-0.5">買入價/基準價</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                    <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
-                  </div>
-                  <input id="singleCostInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white">
-                </div>
-              </div>
-              <div>
-                <label class="block text-[11px] font-medium text-slate-400 mb-0.5">賣出價/目標價</label>
-                <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                    <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  </div>
-                  <input id="singleSellInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white">
-                </div>
-              </div>
+          <div id="tab-single" class="hidden space-y-2 px-1 pb-1">
+            <div class="grid grid-cols-2 gap-2">
+              <input id="singleCostInput" type="number" step="any" placeholder="買入價" class="w-full px-3 py-1.5 text-xs rounded-lg">
+              <input id="singleSellInput" type="number" step="any" placeholder="賣出價" class="w-full px-3 py-1.5 text-xs rounded-lg">
             </div>
-            <div>
-              <label class="block text-[11px] font-medium text-slate-400 mb-0.5">股數 (輸入計算總金額)</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                  <svg class="text-slate-500" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-                </div>
-                <input id="singleQtyInput" type="number" step="any" class="w-full pl-6 pr-2 py-1 text-xs bg-slate-900 border border-slate-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-white">
-              </div>
-            </div>
-            <div id="singleResult" class="hidden mt-1.5 p-1.5 rounded-md border text-xs">
-              <div class="flex justify-between items-center mb-0.5">
-                <span class="text-[11px] font-medium text-slate-400">每股價差</span>
-                <span id="singleDiffText" class="flex items-center font-bold"></span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-medium text-slate-400">報酬率</span>
-                <span id="singlePercentText" class="font-bold"></span>
-              </div>
-              <div id="singleTotalProfitRow" class="hidden justify-between items-center pt-1 mt-1 border-t border-slate-700">
-                <span class="text-[11px] font-medium text-slate-400">總損益金額</span>
-                <span id="singleTotalProfitText" class="font-bold text-sm"></span>
-              </div>
-            </div>
+            <input id="singleQtyInput" type="number" step="any" placeholder="股數 (選填)" class="w-full px-3 py-1.5 text-xs rounded-lg">
+            <div id="singleResult" class="hidden mt-2 p-2 rounded-lg border border-[#444] text-xs"></div>
           </div>
-
         </div>
       </div>
 
-      <!-- 右側：統計數據、圖表與紀錄列表 (佔比 3/4) -->
-      <div class="lg:col-span-3 space-y-3">
+      <!-- 右側：看板、圖表與列表 -->
+      <div class="lg:col-span-3 space-y-4">
         
-        <!-- 核心數據看板 -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-          <!-- 目前股價看板 -->
-          <div class="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700 flex flex-col justify-center relative overflow-hidden group">
-            <div class="absolute -right-3 -bottom-3 opacity-5">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            </div>
-            <div class="flex items-center mb-0.5 relative z-10">
-              <span class="text-slate-400 text-[11px] font-medium">目前股價</span>
-            </div>
-            <input 
-              id="currentPriceDisp" 
-              type="number" 
-              step="any"
-              class="text-xl font-bold text-white relative z-10 bg-transparent border-b border-dashed border-slate-600 hover:border-slate-400 focus:border-solid focus:border-blue-500 py-0 w-full outline-none transition-all"
-            >
+        <!-- 核心看板 -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="card-panel p-4 rounded-2xl flex flex-col justify-center relative overflow-hidden group">
+            <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">當前成交價</span>
+            <input id="currentPriceDisp" type="number" step="any" class="text-2xl font-bold bg-transparent border-none p-0 w-full focus:ring-0 outline-none">
           </div>
-          <!-- 平均成本 -->
-          <div class="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700 flex flex-col justify-center relative overflow-hidden">
-            <div class="absolute -right-3 -bottom-3 opacity-5">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
-            </div>
-            <span class="text-slate-400 text-[11px] font-medium mb-0.5">平均成本 (每股)</span>
-            <span id="avgPriceDisp" class="text-xl font-bold text-white relative z-10">0</span>
+          <div class="card-panel p-4 rounded-2xl flex flex-col justify-center">
+            <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">平均成本</span>
+            <span id="avgPriceDisp" class="text-2xl font-bold text-white">0</span>
           </div>
-          <div class="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700 flex flex-col justify-center relative overflow-hidden">
-            <div class="absolute -right-3 -bottom-3 opacity-5">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-            </div>
-            <span class="text-slate-400 text-[11px] font-medium mb-0.5">總持股數</span>
-            <span id="totalSharesDisp" class="text-xl font-bold text-blue-400 relative z-10">0</span>
+          <div class="card-panel p-4 rounded-2xl flex flex-col justify-center">
+            <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">總持股數</span>
+            <span id="totalSharesDisp" class="text-2xl font-bold text-[#2979ff]">0</span>
           </div>
-          <div class="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700 flex flex-col justify-center relative overflow-hidden">
-            <div class="absolute -right-3 -bottom-3 opacity-5">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            </div>
-            <span class="text-slate-400 text-[11px] font-medium mb-0.5">總投入成本</span>
-            <span id="totalCostDisp" class="text-xl font-bold text-white relative z-10">0</span>
+          <div class="card-panel p-4 rounded-2xl flex flex-col justify-center">
+            <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">總投入成本</span>
+            <span id="totalCostDisp" class="text-2xl font-bold text-white">0</span>
           </div>
-          <!-- 倉位盈利 -->
-          <div class="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700 flex flex-col justify-center relative overflow-hidden col-span-2 md:col-span-1">
-            <div class="absolute -right-3 -bottom-3 opacity-5">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
-            </div>
-            <span class="text-slate-400 text-[11px] font-medium mb-0.5">目前倉位總盈虧</span>
-            <div class="flex flex-row md:flex-col items-baseline justify-between md:justify-start relative z-10">
-              <span id="currentPnlAmountDisp" class="text-xl md:text-2xl font-bold text-slate-500">-</span>
-              <span id="currentPnlPercentDisp" class="text-sm md:text-[11px] font-semibold text-slate-500">-</span>
+          <div class="card-panel p-4 rounded-2xl flex flex-col justify-center col-span-2 md:col-span-1">
+            <span class="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">倉位盈虧</span>
+            <div class="flex flex-row md:flex-col items-baseline justify-between">
+              <span id="currentPnlAmountDisp" class="text-2xl font-bold text-slate-600">-</span>
+              <span id="currentPnlPercentDisp" class="text-sm font-bold text-slate-600">-</span>
             </div>
           </div>
         </div>
 
-        <!-- 官方 TradingView K線圖區塊 -->
-        <div class="bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-700 flex flex-col">
-          <div class="flex justify-between items-center mb-2">
+        <!-- 圖表 -->
+        <div class="card-panel p-4 rounded-2xl flex flex-col">
+          <div class="flex justify-between items-center mb-3">
             <div class="flex items-center space-x-3">
-              <h2 id="chartTitle" class="text-sm font-semibold text-white">市場走勢圖</h2>
-              <select id="chartIntervalSelect" class="bg-slate-900 border border-slate-600 text-[11px] text-slate-300 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer">
+              <h2 id="chartTitle" class="text-sm font-bold text-white">即時趨勢圖</h2>
+              <select id="chartIntervalSelect" class="text-[10px] font-bold rounded-md px-2 py-1 outline-none cursor-pointer">
                 <option value="1">1分</option>
                 <option value="5">5分</option>
                 <option value="15">15分</option>
-                <option value="30">30分</option>
-                <option value="60">1小時</option>
                 <option value="D" selected>日線</option>
                 <option value="W">週線</option>
-                <option value="M">月線</option>
               </select>
             </div>
-            <span id="chartDateRange" class="text-[10px] text-slate-400"></span>
+            <span id="chartDateRange" class="text-[10px] text-slate-500 font-mono">QUANTITATIVE TERMINAL</span>
           </div>
-          <!-- 加高圖表區塊高度，讓官方 TV 顯示更完整 -->
-          <div id="tvchart" class="w-full h-[400px] bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50"></div>
+          <div id="tvchart" class="w-full h-[450px] bg-[#0F0F0F] rounded-xl overflow-hidden border border-[#333]"></div>
         </div>
 
-        <!-- 紀錄列表 -->
-        <div class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 overflow-hidden">
-          <div class="p-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-            <div class="flex space-x-4">
-              <button id="tabBtnCurrent" onclick="switchRecordsTab('current')" class="text-sm font-semibold text-blue-400 border-b-2 border-blue-400 pb-0.5 transition-colors">當前倉位明細</button>
-              <button id="tabBtnHistory" onclick="switchRecordsTab('history')" class="text-sm font-semibold text-slate-500 hover:text-slate-300 pb-0.5 transition-colors">歷史建倉 (<span id="historyCount">0</span>/100)</button>
+        <!-- 列表 -->
+        <div class="card-panel rounded-2xl overflow-hidden">
+          <div class="p-4 border-b border-[#333] flex justify-between items-center bg-[#1e1e1e]">
+            <div class="flex space-x-6">
+              <button id="tabBtnCurrent" onclick="switchRecordsTab('current')" class="text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all">當前倉位</button>
+              <button id="tabBtnHistory" onclick="switchRecordsTab('history')" class="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all">歷史紀錄 (<span id="historyCount">0</span>)</button>
             </div>
-            <button id="clearBtn" class="hidden text-xs flex items-center text-slate-400 hover:text-rose-400 transition-colors">
-              <svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>
-              重新計算
-            </button>
-            <button id="clearHistoryBtn" class="hidden text-xs flex items-center text-slate-400 hover:text-rose-400 transition-colors">
-              <svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-              清空歷史
-            </button>
+            <button id="clearBtn" class="hidden text-[10px] font-bold text-slate-500 hover:text-rose-500 transition-colors">RE-CALCULATE</button>
+            <button id="clearHistoryBtn" class="hidden text-[10px] font-bold text-slate-500 hover:text-rose-500 transition-colors">CLEAR HISTORY</button>
           </div>
           
-          <!-- 當前明細 Table -->
           <div id="currentRecordsView" class="overflow-x-auto block">
-            <table class="w-full text-left border-collapse">
+            <table class="w-full text-left text-xs">
               <thead>
-                <tr class="bg-slate-900/50 text-slate-400 text-xs border-b border-slate-700">
-                  <th class="px-4 py-2 font-medium">代號</th>
-                  <th class="px-4 py-2 font-medium">數量</th>
-                  <th class="px-4 py-2 font-medium">買入價位</th>
-                  <th class="px-4 py-2 font-medium">小計成本</th>
-                  <th class="px-4 py-2 font-medium text-right">操作</th>
+                <tr class="text-slate-500 border-b border-[#333]">
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">代號</th>
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">數量</th>
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">價位</th>
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">小計</th>
+                  <th class="px-6 py-3 text-right">ACTION</th>
                 </tr>
               </thead>
-              <tbody id="recordsTableBody" class="divide-y divide-slate-700/50">
-                <!-- 列表由 Javascript 動態產生 -->
-              </tbody>
+              <tbody id="recordsTableBody" class="divide-y divide-[#333]"></tbody>
             </table>
           </div>
 
-          <!-- 歷史紀錄 Table -->
           <div id="historyRecordsView" class="hidden max-h-[300px] overflow-y-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse relative">
-              <thead class="sticky top-0 z-10">
-                <tr class="bg-slate-900/90 backdrop-blur-sm text-slate-400 text-xs border-b border-slate-700">
-                  <th class="px-4 py-2 font-medium">時間</th>
-                  <th class="px-4 py-2 font-medium">代號</th>
-                  <th class="px-4 py-2 font-medium">數量</th>
-                  <th class="px-4 py-2 font-medium">買入價位</th>
-                  <th class="px-4 py-2 font-medium text-right">操作</th>
+            <table class="w-full text-left text-xs">
+              <thead class="sticky top-0 bg-[#1e1e1e] z-10 shadow-sm">
+                <tr class="text-slate-500 border-b border-[#333]">
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">時間</th>
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">代號</th>
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">數量</th>
+                  <th class="px-6 py-3 font-bold uppercase tracking-wider">價位</th>
+                  <th class="px-6 py-3 text-right">ACTION</th>
                 </tr>
               </thead>
-              <tbody id="historyTableBody" class="divide-y divide-slate-700/50">
-                <!-- 列表由 Javascript 動態產生 -->
-              </tbody>
+              <tbody id="historyTableBody" class="divide-y divide-[#333]"></tbody>
             </table>
           </div>
         </div>
@@ -372,25 +270,18 @@
     </div>
   </div>
 
-  <!-- JavaScript 邏輯 -->
   <script>
-    // --- Finnhub API Key 彈性設定 ---
     let FINNHUB_API_KEY = localStorage.getItem('finnhub_saved_key_v3') || 'd730469r01qn7f075d8gd730469r01qn7f075d90';
 
-    // 狀態變數
     let records = [];
-    let tradeHistory = []; // 新增：歷史紀錄陣列
-    let savedTickers = JSON.parse(localStorage.getItem('savedTickers_PRO')) || []; // 新增：輸入過的代號紀錄
-    let activeRecordsTab = 'current'; // 當前紀錄表格的頁籤
-    let averagePrice = 0;
-    let totalShares = 0;
-    let totalCost = 0;
+    let tradeHistory = [];
+    let savedTickers = JSON.parse(localStorage.getItem('savedTickers_PRO')) || [];
+    let activeRecordsTab = 'current';
+    let averagePrice = 0, totalShares = 0, totalCost = 0;
     let activeTargetMode = 'price'; 
-    let quoteInterval = null; 
-    let currentChartSymbol = ''; 
-    let currentChartInterval = localStorage.getItem('savedChartInterval_PRO') || 'D'; // 新增：記憶圖表週期
+    let quoteInterval = null, currentChartSymbol = ''; 
+    let currentChartInterval = localStorage.getItem('savedChartInterval_PRO') || 'D';
 
-    // DOM 元素參考
     const els = {
       apiKeyBtn: document.getElementById('apiKeyBtn'),
       tickerInputContainer: document.getElementById('tickerInputContainer'),
@@ -399,40 +290,28 @@
       fetchBtn: document.getElementById('fetchBtn'),
       autoRefreshCheckbox: document.getElementById('autoRefreshCheckbox'),
       refreshIntervalInput: document.getElementById('refreshIntervalInput'),
-
       qtyInput: document.getElementById('qtyInput'),
       priceInput: document.getElementById('priceInput'),
       addForm: document.getElementById('addForm'),
-      
       targetPriceInput: document.getElementById('targetPriceInput'),
       percentInput: document.getElementById('percentInput'),
       expectedPnlInput: document.getElementById('expectedPnlInput'),
       pnlResult: document.getElementById('pnlResult'),
-
       singleCostInput: document.getElementById('singleCostInput'),
       singleSellInput: document.getElementById('singleSellInput'),
       singleQtyInput: document.getElementById('singleQtyInput'),
       singleResult: document.getElementById('singleResult'),
-      singleDiffText: document.getElementById('singleDiffText'),
-      singlePercentText: document.getElementById('singlePercentText'),
-      singleTotalProfitRow: document.getElementById('singleTotalProfitRow'),
-      singleTotalProfitText: document.getElementById('singleTotalProfitText'),
-
       currentPriceDisp: document.getElementById('currentPriceDisp'),
       avgPriceDisp: document.getElementById('avgPriceDisp'),
       totalSharesDisp: document.getElementById('totalSharesDisp'),
       totalCostDisp: document.getElementById('totalCostDisp'),
       currentPnlAmountDisp: document.getElementById('currentPnlAmountDisp'),
       currentPnlPercentDisp: document.getElementById('currentPnlPercentDisp'),
-      
       chartTitle: document.getElementById('chartTitle'),
       chartIntervalSelect: document.getElementById('chartIntervalSelect'),
-      chartDateRange: document.getElementById('chartDateRange'),
       tvchartContainer: document.getElementById('tvchart'),
-
       recordsTableBody: document.getElementById('recordsTableBody'),
       clearBtn: document.getElementById('clearBtn'),
-      
       tabBtnCurrent: document.getElementById('tabBtnCurrent'),
       tabBtnHistory: document.getElementById('tabBtnHistory'),
       currentRecordsView: document.getElementById('currentRecordsView'),
@@ -443,17 +322,13 @@
     };
 
     function formatNumber(num, decimals = 2) {
-      return new Intl.NumberFormat('zh-TW', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: decimals,
-      }).format(num);
+      return new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: decimals }).format(num);
     }
 
-    const svgIconUp = `<svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`;
-    const svgIconDown = `<svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
-    const svgIconTrash = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
+    const svgIconUp = `<svg class="inline mr-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`;
+    const svgIconDown = `<svg class="inline mr-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
+    const svgIconTrash = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
 
-    // --- 代號下拉選單邏輯 ---
     function addSavedTicker(symbol) {
       if (!symbol || symbol === '-') return;
       savedTickers = savedTickers.filter(t => t !== symbol);
@@ -464,13 +339,13 @@
 
     function renderTickerDropdown() {
       if (savedTickers.length === 0) {
-        els.tickerDropdown.innerHTML = '<div class="px-3 py-2 text-xs text-slate-500 text-center">尚無紀錄</div>';
+        els.tickerDropdown.innerHTML = '<div class="px-4 py-3 text-xs text-slate-500">無紀錄</div>';
         return;
       }
       els.tickerDropdown.innerHTML = savedTickers.map(t => `
-        <div class="flex justify-between items-center px-3 py-2 hover:bg-slate-700 cursor-pointer group transition-colors border-b border-slate-700/50 last:border-0" onclick="selectTicker('${t}')">
-          <span class="font-medium text-slate-200 text-xs">${t}</span>
-          <button onclick="removeSavedTicker('${t}', event)" class="text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded" title="刪除紀錄">
+        <div class="flex justify-between items-center px-4 py-2 hover:bg-[#2a2a2a] cursor-pointer group transition-colors" onclick="selectTicker('${t}')">
+          <span class="font-bold text-slate-200 text-xs">${t}</span>
+          <button onclick="removeSavedTicker('${t}', event)" class="text-slate-500 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
             ${svgIconTrash}
           </button>
         </div>
@@ -488,644 +363,234 @@
       savedTickers = savedTickers.filter(t => t !== ticker);
       localStorage.setItem('savedTickers_PRO', JSON.stringify(savedTickers));
       renderTickerDropdown();
-      if (savedTickers.length === 0) els.tickerDropdown.classList.add('hidden');
     };
 
-    els.tickerInput.addEventListener('focus', () => {
-      renderTickerDropdown();
-      els.tickerDropdown.classList.remove('hidden');
-    });
+    els.tickerInput.addEventListener('focus', () => { renderTickerDropdown(); els.tickerDropdown.classList.remove('hidden'); });
+    document.addEventListener('click', (e) => { if (!els.tickerInputContainer.contains(e.target)) els.tickerDropdown.classList.add('hidden'); });
 
-    document.addEventListener('click', (e) => {
-      if (!els.tickerInputContainer.contains(e.target)) {
-        els.tickerDropdown.classList.add('hidden');
-      }
-    });
-
-    // --- 歷史紀錄切換邏輯 ---
     window.switchRecordsTab = function(tab) {
       activeRecordsTab = tab;
-      if (tab === 'current') {
-        els.tabBtnCurrent.className = 'text-sm font-semibold text-blue-400 border-b-2 border-blue-400 pb-0.5 transition-colors';
-        els.tabBtnHistory.className = 'text-sm font-semibold text-slate-500 hover:text-slate-300 pb-0.5 transition-colors';
-        els.currentRecordsView.classList.remove('hidden');
-        els.currentRecordsView.classList.add('block');
-        els.historyRecordsView.classList.add('hidden');
-        els.historyRecordsView.classList.remove('block');
-        
-        els.clearBtn.classList.toggle('hidden', records.length === 0);
-        els.clearHistoryBtn.classList.add('hidden');
-      } else {
-        els.tabBtnHistory.className = 'text-sm font-semibold text-blue-400 border-b-2 border-blue-400 pb-0.5 transition-colors';
-        els.tabBtnCurrent.className = 'text-sm font-semibold text-slate-500 hover:text-slate-300 pb-0.5 transition-colors';
-        els.historyRecordsView.classList.remove('hidden');
-        els.historyRecordsView.classList.add('block');
-        els.currentRecordsView.classList.add('hidden');
-        els.currentRecordsView.classList.remove('block');
-
-        els.clearHistoryBtn.classList.toggle('hidden', tradeHistory.length === 0);
-        els.clearBtn.classList.add('hidden');
-      }
+      const isCurrent = tab === 'current';
+      els.tabBtnCurrent.className = isCurrent ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1';
+      els.tabBtnHistory.className = !isCurrent ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1';
+      els.currentRecordsView.classList.toggle('hidden', !isCurrent);
+      els.historyRecordsView.classList.toggle('hidden', isCurrent);
+      els.clearBtn.classList.toggle('hidden', !isCurrent || records.length === 0);
+      els.clearHistoryBtn.classList.toggle('hidden', isCurrent || tradeHistory.length === 0);
     };
 
-    // --- 設定 API Key 邏輯 ---
     els.apiKeyBtn.addEventListener('click', () => {
-      const newKey = prompt('請輸入您的 Finnhub API Key：', FINNHUB_API_KEY);
-      if (newKey && newKey.trim() !== '') {
-        FINNHUB_API_KEY = newKey.trim();
-        localStorage.setItem('finnhub_saved_key_v3', FINNHUB_API_KEY);
-        alert('API Key 已更新並儲存！請重新點擊「抓取」。');
-      }
+      const newKey = prompt('輸入 Finnhub API Key：', FINNHUB_API_KEY);
+      if (newKey) { FINNHUB_API_KEY = newKey.trim(); localStorage.setItem('finnhub_saved_key_v3', FINNHUB_API_KEY); }
     });
 
-    // --- 頁籤切換邏輯 ---
     function switchTab(tabId) {
-      const tabs = ['target', 'single'];
-      tabs.forEach(t => {
-        const contentEl = document.getElementById(`tab-${t}`);
-        if (contentEl) {
-          if (t === tabId) {
-            contentEl.classList.remove('hidden');
-            contentEl.classList.add('block');
-          } else {
-            contentEl.classList.add('hidden');
-            contentEl.classList.remove('block');
-          }
-        }
-        
+      ['target', 'single'].forEach(t => {
+        const active = t === tabId;
+        document.getElementById(`tab-${t}`).classList.toggle('hidden', !active);
         const btn = document.getElementById(`btn-tab-${t}`);
-        if (btn) {
-          if (t === tabId) {
-            btn.className = `flex-1 min-w-max text-[11px] py-1 px-2 rounded bg-slate-700 text-white font-medium transition-colors`;
-          } else {
-            btn.className = `flex-1 min-w-max text-[11px] py-1 px-2 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors`;
-          }
-        }
+        btn.className = active ? 'flex-1 text-[11px] py-1.5 rounded-md bg-[#2979ff] text-white font-bold transition-all' : 'flex-1 text-[11px] py-1.5 rounded-md text-slate-500 hover:text-slate-300 transition-all';
       });
-      localStorage.setItem('activeCalcTabHTML', tabId);
     }
 
-    // --- 渲染官方 TradingView Widget ---
     function renderTradingViewWidget(symbol, interval) {
       if (typeof TradingView === 'undefined') return;
-      
-      // 清空先前的圖表
       els.tvchartContainer.innerHTML = '';
-      
       new TradingView.widget({
         "autosize": true,
-        "symbol": symbol,
+        "symbol": symbol.includes(":") ? symbol : "BATS:" + symbol,
         "interval": interval,
         "timezone": "Asia/Taipei",
         "theme": "dark",
         "style": "1",
         "locale": "zh_TW",
-        "enable_publishing": false,
-        "backgroundColor": "rgba(15, 23, 42, 1)", // 對應 Tailwind 的 slate-900
-        "gridColor": "rgba(30, 41, 59, 0.5)",    // 對應 Tailwind 的 slate-800
-        "hide_top_toolbar": false,
-        "hide_legend": false,
-        "save_image": false,
+        "backgroundColor": "#0F0F0F",
+        "gridColor": "rgba(242, 242, 242, 0.06)",
+        "hide_side_toolbar": true,
         "container_id": "tvchart",
-        "toolbar_bg": "rgba(15, 23, 42, 1)",
       });
-      
-      els.chartTitle.textContent = `${symbol} 專業即時圖表`;
-      els.chartDateRange.textContent = "免 API Key / 永不報錯";
-      
-      // 記錄當前圖表的代號
       currentChartSymbol = symbol;
     }
 
-    // --- 監聽圖表週期切換 ---
     els.chartIntervalSelect.addEventListener('change', (e) => {
       currentChartInterval = e.target.value;
       localStorage.setItem('savedChartInterval_PRO', currentChartInterval);
-      // 如果目前已有載入圖表，立刻切換並重新渲染
-      if (currentChartSymbol) {
-        renderTradingViewWidget(currentChartSymbol, currentChartInterval);
-      }
+      if (currentChartSymbol) renderTradingViewWidget(currentChartSymbol, currentChartInterval);
     });
 
-    // --- 抓取邏輯 (圖表用TV, 報價用Finnhub) ---
     async function fetchStockData() {
       const symbol = els.tickerInput.value.toUpperCase().trim();
-      if (!symbol) {
-        alert("請輸入股票代號！");
-        return;
-      }
-
-      // 儲存至搜尋紀錄
+      if (!symbol) return;
       addSavedTicker(symbol);
-
-      els.fetchBtn.textContent = "載入中..";
+      els.fetchBtn.textContent = "..";
       els.fetchBtn.disabled = true;
-
-      // 1. 只有在「更換標的」時，才重新載入 TradingView 官方圖表
-      // 這樣可以保留使用者切換的時間週期(如 15m, 1h) 與畫線紀錄！
-      if (symbol !== currentChartSymbol) {
-        renderTradingViewWidget(symbol, currentChartInterval);
-      }
-
-      // 2. 抓取 Finnhub 即時報價 (計算器使用)
+      if (symbol !== currentChartSymbol) renderTradingViewWidget(symbol, currentChartInterval);
       try {
-        const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
-        
-        if (quoteRes.status === 401) {
-            alert("⚠️ 您的 Finnhub API Key 無效或已過期！\n\n雖然下方的圖表能正常顯示，但「即時現價與損益」無法自動更新。\n請點擊右上角的「🔑 設定 API Key」重新設定。");
-            return;
-        }
-        if (quoteRes.status === 429) {
-            alert("API 呼叫次數達到免費版上限 (每分鐘 60 次)，請稍等一分鐘後再試。");
-            return;
-        }
-
-        const quoteData = await quoteRes.json();
-        
-        if (quoteData && typeof quoteData.c !== 'undefined' && quoteData.c !== 0) {
-          els.currentPriceDisp.value = quoteData.c;
-          updateCurrentPriceColor(); 
-          saveData(); 
-        }
-
-      } catch (err) {
-        console.error("API Error", err);
-        // 不打擾用戶，因為圖表已經出來了
-      } finally {
-        els.fetchBtn.textContent = "抓取";
-        els.fetchBtn.disabled = false;
-      }
+        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+        const data = await res.json();
+        if (data && data.c) { els.currentPriceDisp.value = data.c; updateCurrentPriceColor(); saveData(); }
+      } catch (err) { console.error(err); } finally { els.fetchBtn.textContent = "抓取"; els.fetchBtn.disabled = false; }
     }
 
-    // --- 背景自動刷新 (僅報價) ---
     async function fetchQuoteOnly() {
       const symbol = els.tickerInput.value.toUpperCase().trim();
       if (!symbol) return;
-
       try {
-        const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
-        
-        if (quoteRes.status === 401 || quoteRes.status === 429) {
-          els.autoRefreshCheckbox.checked = false;
-          clearInterval(quoteInterval);
-          return;
-        }
-
-        if (quoteRes.status === 200) {
-          const quoteData = await quoteRes.json();
-          if (quoteData && typeof quoteData.c !== 'undefined' && quoteData.c !== 0) {
-            if(parseFloat(els.currentPriceDisp.value) !== quoteData.c) {
-                els.currentPriceDisp.value = quoteData.c;
-                updateCurrentPriceColor(); 
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Auto-refresh Error", err);
-      }
-    }
-
-    function startAutoRefresh() {
-      clearInterval(quoteInterval);
-      let sec = parseFloat(els.refreshIntervalInput.value);
-      if (isNaN(sec) || sec < 1) sec = 1; // 最低限制為 1 秒
-      quoteInterval = setInterval(fetchQuoteOnly, sec * 1000);
+        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+        const data = await res.json();
+        if (data && data.c && parseFloat(els.currentPriceDisp.value) !== data.c) { els.currentPriceDisp.value = data.c; updateCurrentPriceColor(); }
+      } catch (err) {}
     }
 
     els.autoRefreshCheckbox.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        if (!els.tickerInput.value.trim()) {
-          alert("請先輸入股票代號！");
-          e.target.checked = false;
-          return;
-        }
-        fetchQuoteOnly(); 
-        startAutoRefresh();
-      } else {
-        clearInterval(quoteInterval); 
-      }
+      if (e.target.checked) { fetchQuoteOnly(); let sec = Math.max(1, parseFloat(els.refreshIntervalInput.value) || 2); quoteInterval = setInterval(fetchQuoteOnly, sec * 1000); }
+      else clearInterval(quoteInterval);
       saveData();
     });
 
-    els.refreshIntervalInput.addEventListener('input', () => {
-      if (els.autoRefreshCheckbox.checked) {
-        startAutoRefresh();
-      }
-      saveData();
-    });
+    els.refreshIntervalInput.addEventListener('input', () => { if (els.autoRefreshCheckbox.checked) { clearInterval(quoteInterval); let sec = Math.max(1, parseFloat(els.refreshIntervalInput.value) || 2); quoteInterval = setInterval(fetchQuoteOnly, sec * 1000); } saveData(); });
 
     els.fetchBtn.addEventListener('click', fetchStockData);
-    els.tickerInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        fetchStockData();
-      }
-    });
+    els.tickerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); fetchStockData(); }});
 
-    // --- 儲存與讀取狀態 ---
     function saveData() {
-      const appState = {
-        records: records,
-        ticker: els.tickerInput.value,
-        currentPrice: els.currentPriceDisp.value,
-        targetPrice: els.targetPriceInput.value,
-        percentInput: els.percentInput.value,
-        expectedPnl: els.expectedPnlInput.value,
-        singleCost: els.singleCostInput.value,
-        singleSell: els.singleSellInput.value,
-        singleQty: els.singleQtyInput.value,
-        autoRefresh: els.autoRefreshCheckbox.checked,
-        refreshInterval: els.refreshIntervalInput.value,
-        activeTargetMode: activeTargetMode 
-      };
-      localStorage.setItem('stockCalcStateHTML_PRO_V2', JSON.stringify(appState));
-    }
-    
-    function saveHistoryData() {
-      localStorage.setItem('stockCalcHistory_PRO', JSON.stringify(tradeHistory));
+      localStorage.setItem('stockCalcStateHTML_PRO_V3', JSON.stringify({
+        records, ticker: els.tickerInput.value, currentPrice: els.currentPriceDisp.value,
+        autoRefresh: els.autoRefreshCheckbox.checked, refreshInterval: els.refreshIntervalInput.value
+      }));
     }
 
-    function loadData() {
-      const saved = localStorage.getItem('stockCalcStateHTML_PRO_V2');
-      if (saved) {
-        try {
-          const appState = JSON.parse(saved);
-          records = appState.records || [];
-          els.tickerInput.value = appState.ticker || '';
-          els.currentPriceDisp.value = appState.currentPrice || '';
-          els.targetPriceInput.value = appState.targetPrice || '';
-          if (appState.percentInput !== undefined) els.percentInput.value = appState.percentInput;
-          if (appState.expectedPnl !== undefined) els.expectedPnlInput.value = appState.expectedPnl;
-          els.singleCostInput.value = appState.singleCost || '';
-          els.singleSellInput.value = appState.singleSell || '';
-          els.singleQtyInput.value = appState.singleQty || '';
-          els.autoRefreshCheckbox.checked = appState.autoRefresh || false; 
-          els.refreshIntervalInput.value = appState.refreshInterval || '2';
-          activeTargetMode = appState.activeTargetMode || 'price';
-        } catch (e) {
-          console.error('載入記憶資料失敗', e);
-        }
-      }
-      
-      // 載入儲存的圖表週期
-      els.chartIntervalSelect.value = currentChartInterval;
-
-      // 載入歷史紀錄
-      const savedHist = localStorage.getItem('stockCalcHistory_PRO');
-      if (savedHist) {
-        try { tradeHistory = JSON.parse(savedHist); } catch(e) {}
-      }
-      renderHistoryTable();
-      
-      const savedTab = localStorage.getItem('activeCalcTabHTML') || 'target';
-      switchTab(savedTab);
-    }
-
-    document.addEventListener('input', (e) => {
-        if(e.target.id !== 'currentPriceDisp') saveData();
-    });
-
-    // --- 核心運算 ---
     function calculateCore() {
-      totalShares = 0;
-      totalCost = 0;
-      
-      records.forEach(r => {
-        totalShares += r.quantity;
-        totalCost += r.cost;
-      });
-      
+      totalShares = records.reduce((s, r) => s + r.quantity, 0);
+      totalCost = records.reduce((s, r) => s + r.cost, 0);
       averagePrice = totalShares > 0 ? totalCost / totalShares : 0;
-      
       els.totalSharesDisp.textContent = formatNumber(totalShares);
       els.totalCostDisp.textContent = formatNumber(totalCost);
       els.avgPriceDisp.textContent = formatNumber(averagePrice, 4);
-
-      const isDisabled = totalShares === 0;
-      els.targetPriceInput.disabled = isDisabled;
-      els.percentInput.disabled = isDisabled;
-      els.expectedPnlInput.disabled = isDisabled;
-
-      calculatePnl();
-      renderTable();
-      updateCurrentPriceColor(); 
-      saveData();
+      const dis = totalShares === 0;
+      els.targetPriceInput.disabled = dis; els.percentInput.disabled = dis; els.expectedPnlInput.disabled = dis;
+      calculatePnl(); renderTable(); updateCurrentPriceColor(); saveData();
     }
 
-    // --- 解除三向連動的獨立試算邏輯 (加入正負雙向預測) ---
     els.targetPriceInput.addEventListener('input', () => { activeTargetMode = 'price'; calculatePnl(); });
     els.percentInput.addEventListener('input', () => { activeTargetMode = 'percent'; calculatePnl(); });
     els.expectedPnlInput.addEventListener('input', () => { activeTargetMode = 'pnl'; calculatePnl(); });
 
     function calculatePnl() {
-      if (totalShares === 0 || averagePrice <= 0) {
-        els.pnlResult.classList.add('hidden');
-        return;
-      }
-      
-      let resultHtml = '';
-      let isValid = false;
-      
-      els.pnlResult.className = `mt-1.5 space-y-1.5`;
-
+      if (totalShares === 0 || averagePrice <= 0) { els.pnlResult.classList.add('hidden'); return; }
+      els.pnlResult.classList.remove('hidden');
+      let html = '';
       if (activeTargetMode === 'price') {
         const val = parseFloat(els.targetPriceInput.value);
-        if (!isNaN(val) && val > 0) {
-          const calcPnl = (val - averagePrice) * totalShares;
-          const calcPercent = ((val - averagePrice) / averagePrice) * 100;
-          const isPositive = calcPnl >= 0;
-          const colorClass = isPositive ? 'text-emerald-400' : 'text-rose-400';
-          const bgClass = isPositive ? 'bg-emerald-900/20 border-emerald-800/50' : 'bg-rose-900/20 border-rose-800/50';
-          const prefix = calcPnl > 0 ? '+' : '';
-          
-          resultHtml = `
-            <div class="p-2 rounded-md border text-xs ${bgClass}">
-              <div class="flex justify-between items-center mb-0.5"><span class="text-[11px] font-medium text-slate-400">預估損益</span><span class="flex items-center font-bold ${colorClass}">${isPositive ? svgIconUp : svgIconDown} ${prefix}${formatNumber(calcPnl)}</span></div>
-              <div class="flex justify-between items-center"><span class="text-[11px] font-medium text-slate-400">報酬率</span><span class="font-bold ${colorClass}">${prefix}${formatNumber(calcPercent)}%</span></div>
-            </div>`;
-          isValid = true;
+        if (!isNaN(val)) {
+          const p = (val - averagePrice) * totalShares, pct = ((val - averagePrice) / averagePrice) * 100;
+          const color = p >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+          html = `<div class="p-3 rounded-xl bg-[#2a2a2a] border border-[#444]"><div class="flex justify-between items-center mb-1"><span class="text-slate-500">預估損益</span><span class="font-bold ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}</span></div><div class="flex justify-between items-center"><span class="text-slate-500">報酬率</span><span class="font-bold ${color}">${pct >= 0 ? '+' : ''}${formatNumber(pct)}%</span></div></div>`;
         }
       } else if (activeTargetMode === 'percent') {
-        let val = parseFloat(els.percentInput.value);
+        let val = Math.abs(parseFloat(els.percentInput.value));
         if (!isNaN(val)) {
-          val = Math.abs(val); // 強制取正數來做雙向試算
-          const upPrice = averagePrice * (1 + (val / 100));
-          const downPrice = averagePrice * (1 - (val / 100));
-          const upPnl = (upPrice - averagePrice) * totalShares;
-          const downPnl = (downPrice - averagePrice) * totalShares;
-          
-          resultHtml = `
-            <div class="p-2 rounded-md bg-emerald-900/20 border border-emerald-800/50 text-xs">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-medium text-emerald-400 flex items-center">上漲 ${val}%</span>
-                <span class="font-bold text-emerald-400">${formatNumber(upPrice, 4)}</span>
-              </div>
-              <div class="flex justify-between items-center border-t border-emerald-800/30 pt-1 mt-1">
-                <span class="text-[10px] text-emerald-500/70">預估倉位總損益</span>
-                <span class="font-bold text-[11px] text-emerald-400 flex items-center">${svgIconUp} +${formatNumber(upPnl)}</span>
-              </div>
+          const upP = averagePrice * (1 + val/100), dwP = averagePrice * (1 - val/100);
+          const upPn = (upP - averagePrice) * totalShares, dwPn = (dwP - averagePrice) * totalShares;
+          html = `
+            <div class="p-2.5 rounded-xl bg-[#00e676]/10 border border-[#00e676]/30 text-[11px]">
+              <div class="flex justify-between"><span>上漲 ${val}%</span><span class="font-bold text-[#00e676]">${formatNumber(upP, 4)}</span></div>
+              <div class="mt-1 flex justify-between opacity-70"><span>預估損益</span><span class="font-bold text-[#00e676]">+${formatNumber(upPn)}</span></div>
             </div>
-            <div class="p-2 rounded-md bg-rose-900/20 border border-rose-800/50 text-xs">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-medium text-rose-400 flex items-center">下跌 ${val}%</span>
-                <span class="font-bold text-rose-400">${formatNumber(downPrice, 4)}</span>
-              </div>
-              <div class="flex justify-between items-center border-t border-rose-800/30 pt-1 mt-1">
-                <span class="text-[10px] text-rose-500/70">預估倉位總損益</span>
-                <span class="font-bold text-[11px] text-rose-400 flex items-center">${svgIconDown} ${formatNumber(downPnl)}</span>
-              </div>
-            </div>
-          `;
-          isValid = true;
+            <div class="p-2.5 rounded-xl bg-[#ff5252]/10 border border-[#ff5252]/30 text-[11px]">
+              <div class="flex justify-between"><span>下跌 ${val}%</span><span class="font-bold text-[#ff5252]">${formatNumber(dwP, 4)}</span></div>
+              <div class="mt-1 flex justify-between opacity-70"><span>預估損益</span><span class="font-bold text-[#ff5252]">${formatNumber(dwPn)}</span></div>
+            </div>`;
         }
       } else if (activeTargetMode === 'pnl') {
-        let val = parseFloat(els.expectedPnlInput.value);
+        let val = Math.abs(parseFloat(els.expectedPnlInput.value));
         if (!isNaN(val)) {
-          val = Math.abs(val); // 強制取正數來做雙向試算
-          const upPrice = averagePrice + (val / totalShares);
-          const downPrice = averagePrice - (val / totalShares);
-          const upPercent = ((upPrice - averagePrice) / averagePrice) * 100;
-          const downPercent = ((downPrice - averagePrice) / averagePrice) * 100;
-          
-          resultHtml = `
-            <div class="p-2 rounded-md bg-emerald-900/20 border border-emerald-800/50 text-xs">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-medium text-emerald-400 flex items-center">獲利 +${formatNumber(val)}</span>
-                <span class="font-bold text-emerald-400">需達 ${formatNumber(upPrice, 4)}</span>
-              </div>
-              <div class="flex justify-between items-center border-t border-emerald-800/30 pt-1 mt-1">
-                <span class="text-[10px] text-emerald-500/70">需上漲</span>
-                <span class="font-bold text-[11px] text-emerald-400 flex items-center">${svgIconUp} +${formatNumber(upPercent)}%</span>
-              </div>
+          const upP = averagePrice + (val/totalShares), dwP = averagePrice - (val/totalShares);
+          html = `
+            <div class="p-2.5 rounded-xl bg-[#00e676]/10 border border-[#00e676]/30 text-[11px]">
+              <div class="flex justify-between"><span>獲利 +${formatNumber(val)}</span><span class="font-bold text-[#00e676]">${formatNumber(upP, 4)}</span></div>
             </div>
-            <div class="p-2 rounded-md bg-rose-900/20 border border-rose-800/50 text-xs">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-medium text-rose-400 flex items-center">虧損 -${formatNumber(val)}</span>
-                <span class="font-bold text-rose-400">跌至 ${formatNumber(downPrice, 4)}</span>
-              </div>
-              <div class="flex justify-between items-center border-t border-rose-800/30 pt-1 mt-1">
-                <span class="text-[10px] text-rose-500/70">需下跌</span>
-                <span class="font-bold text-[11px] text-rose-400 flex items-center">${svgIconDown} ${formatNumber(downPercent)}%</span>
-              </div>
-            </div>
-          `;
-          isValid = true;
+            <div class="p-2.5 rounded-xl bg-[#ff5252]/10 border border-[#ff5252]/30 text-[11px]">
+              <div class="flex justify-between"><span>虧損 -${formatNumber(val)}</span><span class="font-bold text-[#ff5252]">${formatNumber(dwP, 4)}</span></div>
+            </div>`;
         }
       }
-
-      if (!isValid) {
-        els.pnlResult.classList.add('hidden');
-        return;
-      }
-      
-      els.pnlResult.classList.remove('hidden');
-      els.pnlResult.innerHTML = resultHtml;
+      els.pnlResult.innerHTML = html;
     }
 
     function calculateSingleTrade() {
-      const cost = parseFloat(els.singleCostInput.value);
-      const sell = parseFloat(els.singleSellInput.value);
-      const qty = parseFloat(els.singleQtyInput.value);
-
-      if (!isNaN(cost) && cost > 0 && !isNaN(sell)) {
+      const c = parseFloat(els.singleCostInput.value), s = parseFloat(els.singleSellInput.value), q = parseFloat(els.singleQtyInput.value);
+      if (!isNaN(c) && !isNaN(s)) {
         els.singleResult.classList.remove('hidden');
-        const diff = sell - cost;
-        const percent = (diff / cost) * 100;
-        const isPositive = diff >= 0;
-        const colorClass = isPositive ? 'text-emerald-400' : 'text-rose-400';
-        const bgClass = isPositive ? 'bg-emerald-900/20 border-emerald-800/50' : 'bg-rose-900/20 border-rose-800/50';
-        const prefix = diff > 0 ? '+' : '';
-
-        els.singleResult.className = `mt-1.5 p-1.5 rounded-md border text-xs ${bgClass}`;
-        els.singleDiffText.className = `flex items-center font-bold ${colorClass}`;
-        els.singleDiffText.innerHTML = `${isPositive ? svgIconUp : svgIconDown} ${prefix}${formatNumber(diff, 4)}`;
-        els.singlePercentText.className = `font-bold ${colorClass}`;
-        els.singlePercentText.textContent = `${prefix}${formatNumber(percent)}%`;
-
-        if (!isNaN(qty) && qty > 0) {
-          els.singleTotalProfitRow.classList.remove('hidden');
-          els.singleTotalProfitRow.classList.add('flex');
-          els.singleTotalProfitText.className = `font-bold text-sm ${colorClass}`;
-          els.singleTotalProfitText.textContent = `${prefix}${formatNumber(diff * qty)}`;
-        } else {
-          els.singleTotalProfitRow.classList.add('hidden');
-          els.singleTotalProfitRow.classList.remove('flex');
-        }
-      } else {
-        els.singleResult.classList.add('hidden');
-      }
+        const d = s - c, p = (d / c) * 100, color = d >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+        let h = `<div class="flex justify-between"><span>價差</span><span class="font-bold ${color}">${d >= 0 ? '+' : ''}${formatNumber(d, 4)}</span></div><div class="flex justify-between"><span>報酬</span><span class="font-bold ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}%</span></div>`;
+        if (q > 0) h += `<div class="mt-1 pt-1 border-t border-[#444] flex justify-between"><span class="font-bold">總計</span><span class="font-bold ${color}">${formatNumber(d * q)}</span></div>`;
+        els.singleResult.innerHTML = h;
+      } else els.singleResult.classList.add('hidden');
     }
-
-    els.singleCostInput.addEventListener('input', calculateSingleTrade);
-    els.singleSellInput.addEventListener('input', calculateSingleTrade);
-    els.singleQtyInput.addEventListener('input', calculateSingleTrade);
+    ['singleCostInput', 'singleSellInput', 'singleQtyInput'].forEach(id => els[id].addEventListener('input', calculateSingleTrade));
 
     function updateCurrentPriceColor() {
-      const val = parseFloat(els.currentPriceDisp.value);
-      const baseClass = 'text-xl font-bold relative z-10 bg-transparent border-b border-dashed py-0 w-full outline-none transition-all ';
-      
-      if (isNaN(val)) {
-        els.currentPriceDisp.className = baseClass + 'text-white border-slate-600 hover:border-slate-400 focus:border-solid focus:border-blue-500';
-        els.currentPnlAmountDisp.className = 'text-xl md:text-2xl font-bold text-slate-500';
-        els.currentPnlAmountDisp.textContent = '-';
-        els.currentPnlPercentDisp.className = 'text-sm md:text-[11px] font-semibold text-slate-500';
-        els.currentPnlPercentDisp.textContent = '-';
-      } else {
-        if (averagePrice > 0 && val > averagePrice) {
-          els.currentPriceDisp.className = baseClass + 'text-emerald-400 border-emerald-700 hover:border-emerald-500 focus:border-solid focus:border-emerald-500';
-        } else if (averagePrice > 0 && val < averagePrice) {
-          els.currentPriceDisp.className = baseClass + 'text-rose-400 border-rose-700 hover:border-rose-500 focus:border-solid focus:border-rose-500';
-        } else {
-          els.currentPriceDisp.className = baseClass + 'text-white border-slate-600 hover:border-slate-400 focus:border-solid focus:border-blue-500';
-        }
-
-        if (totalShares > 0) {
-          const pnl = (val * totalShares) - totalCost;
-          const isPos = pnl >= 0;
-          const colorClass = isPos ? 'text-emerald-400' : 'text-rose-400';
-          const prefix = pnl > 0 ? '+' : '';
-
-          els.currentPnlAmountDisp.className = `text-xl md:text-2xl font-bold ${colorClass}`;
-          els.currentPnlAmountDisp.textContent = `${prefix}${formatNumber(pnl)}`;
-          els.currentPnlPercentDisp.className = `text-sm md:text-[11px] font-semibold ${colorClass}`;
-          els.currentPnlPercentDisp.textContent = `${prefix}${formatNumber((pnl / totalCost) * 100)}%`;
-        } else {
-          els.currentPnlAmountDisp.className = 'text-xl md:text-2xl font-bold text-slate-500';
-          els.currentPnlAmountDisp.textContent = '-';
-          els.currentPnlPercentDisp.className = 'text-sm md:text-[11px] font-semibold text-slate-500';
-          els.currentPnlPercentDisp.textContent = '-';
-        }
+      const v = parseFloat(els.currentPriceDisp.value);
+      if (isNaN(v)) { els.currentPnlAmountDisp.textContent = '-'; return; }
+      const c = (averagePrice > 0 && v > averagePrice) ? '#00e676' : (averagePrice > 0 && v < averagePrice) ? '#ff5252' : '#fff';
+      els.currentPriceDisp.style.color = c;
+      if (totalShares > 0) {
+        const p = (v * totalShares) - totalCost, color = p >= 0 ? '#00e676' : '#ff5252';
+        els.currentPnlAmountDisp.style.color = color; els.currentPnlAmountDisp.textContent = (p > 0 ? '+' : '') + formatNumber(p);
+        els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = (p > 0 ? '+' : '') + formatNumber((p/totalCost)*100) + '%';
       }
     }
     els.currentPriceDisp.addEventListener('input', updateCurrentPriceColor);
 
-    els.qtyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); els.priceInput.focus(); }});
     els.addForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const price = parseFloat(els.priceInput.value);
-      const quantity = parseFloat(els.qtyInput.value);
-      if (isNaN(price) || price <= 0 || isNaN(quantity) || quantity <= 0) return alert('請輸入有效數字');
-
-      const tickerSym = els.tickerInput.value.toUpperCase().trim() || '-';
-
-      records.push({ 
-        id: Date.now().toString(), 
-        ticker: tickerSym, 
-        price: price, 
-        quantity: quantity, 
-        cost: price * quantity 
-      });
-      
-      // 同時寫入歷史建倉紀錄 (最多100筆)
-      const now = new Date();
-      const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-      
-      tradeHistory.unshift({
-         id: Date.now().toString() + '_h',
-         time: timeStr,
-         ticker: tickerSym,
-         price: price,
-         quantity: quantity
-      });
+      const p = parseFloat(els.priceInput.value), q = parseFloat(els.qtyInput.value), s = els.tickerInput.value.toUpperCase().trim() || '-';
+      if (isNaN(p) || p <= 0 || isNaN(q) || q <= 0) return;
+      records.push({ id: Date.now().toString(), ticker: s, price: p, quantity: q, cost: p * q });
+      tradeHistory.unshift({ id: Date.now().toString()+'h', time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), ticker: s, price: p, quantity: q });
       if (tradeHistory.length > 100) tradeHistory.pop();
-      saveHistoryData();
-      renderHistoryTable();
-
-      els.priceInput.value = ''; els.qtyInput.value = ''; els.qtyInput.focus();
-      calculateCore();
+      els.priceInput.value = ''; els.qtyInput.value = ''; calculateCore(); renderHistoryTable(); localStorage.setItem('stockCalcHistory_PRO', JSON.stringify(tradeHistory));
     });
 
-    window.deleteRecord = function(id) { records = records.filter(r => r.id !== id); calculateCore(); };
-    window.deleteHistoryRecord = function(id) { 
-      tradeHistory = tradeHistory.filter(r => r.id !== id); 
-      saveHistoryData(); 
-      renderHistoryTable(); 
-    };
-
-    els.clearBtn.addEventListener('click', () => {
-      if (window.confirm('確定清空所有當前紀錄？(歷史紀錄不會被刪除)')) {
-        records = [];
-        ['targetPriceInput', 'percentInput', 'expectedPnlInput', 'currentPriceDisp', 'singleCostInput', 'singleSellInput', 'singleQtyInput'].forEach(id => els[id].value = '');
-        activeTargetMode = 'price';
-        calculateCore();
-        calculateSingleTrade();
-      }
-    });
-
-    els.clearHistoryBtn.addEventListener('click', () => {
-      if (window.confirm('確定清空所有「歷史建倉」紀錄嗎？')) {
-        tradeHistory = [];
-        saveHistoryData();
-        renderHistoryTable();
-      }
-    });
+    window.deleteRecord = (id) => { records = records.filter(r => r.id !== id); calculateCore(); };
+    window.deleteHistoryRecord = (id) => { tradeHistory = tradeHistory.filter(r => r.id !== id); renderHistoryTable(); localStorage.setItem('stockCalcHistory_PRO', JSON.stringify(tradeHistory)); };
+    els.clearBtn.addEventListener('click', () => { if(confirm('清空當前紀錄？')) { records = []; calculateCore(); }});
+    els.clearHistoryBtn.addEventListener('click', () => { if(confirm('清空歷史？')) { tradeHistory = []; renderHistoryTable(); localStorage.setItem('stockCalcHistory_PRO', JSON.stringify(tradeHistory)); }});
 
     function renderTable() {
-      if (activeRecordsTab === 'current') {
-        els.clearBtn.classList.toggle('hidden', records.length === 0);
-      }
-      
-      if (records.length === 0) {
-        els.recordsTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">尚無建倉紀錄。</td></tr>`;
-        return;
-      }
-      els.recordsTableBody.innerHTML = records.map(record => {
-        const tickerHtml = (record.ticker && record.ticker !== '-') 
-          ? `<span class="cursor-pointer hover:text-blue-300 hover:underline decoration-blue-400/50 decoration-dashed transition-all" onclick="selectTicker('${record.ticker}')">${record.ticker}</span>` 
-          : '-';
-        return `
-        <tr class="hover:bg-slate-700/30 transition-colors">
-          <td class="px-4 py-2 font-bold text-blue-400 text-xs">${tickerHtml}</td>
-          <td class="px-4 py-2 font-medium text-slate-200">${formatNumber(record.quantity)}</td>
-          <td class="px-4 py-2 text-slate-300">${formatNumber(record.price, 4)}</td>
-          <td class="px-4 py-2 text-slate-300">${formatNumber(record.cost)}</td>
-          <td class="px-4 py-2 text-right">
-            <button onclick="deleteRecord('${record.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors" title="刪除">${svgIconTrash}</button>
-          </td>
-        </tr>
-      `}).join('');
+      els.recordsTableBody.innerHTML = records.map(r => `
+        <tr class="hover:bg-white/[0.03] transition-colors">
+          <td class="px-6 py-3 font-bold text-[#2979ff] cursor-pointer" onclick="selectTicker('${r.ticker}')">${r.ticker}</td>
+          <td class="px-6 py-3">${formatNumber(r.quantity)}</td>
+          <td class="px-6 py-3 text-slate-300">$${formatNumber(r.price, 4)}</td>
+          <td class="px-6 py-3 text-slate-400">$${formatNumber(r.cost)}</td>
+          <td class="px-6 py-3 text-right"><button onclick="deleteRecord('${r.id}')" class="text-slate-600 hover:text-rose-500">${svgIconTrash}</button></td>
+        </tr>`).join('');
     }
 
     function renderHistoryTable() {
       els.historyCount.textContent = tradeHistory.length;
-      if (activeRecordsTab === 'history') {
-        els.clearHistoryBtn.classList.toggle('hidden', tradeHistory.length === 0);
-      }
-      
-      if (tradeHistory.length === 0) {
-        els.historyTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">尚無歷史建倉紀錄。</td></tr>`;
-        return;
-      }
-      els.historyTableBody.innerHTML = tradeHistory.map(r => {
-        const tickerHtml = (r.ticker && r.ticker !== '-') 
-          ? `<span class="cursor-pointer hover:text-blue-300 hover:underline decoration-blue-400/50 decoration-dashed transition-all" onclick="selectTicker('${r.ticker}')">${r.ticker}</span>` 
-          : '-';
-        return `
-        <tr class="hover:bg-slate-700/30 transition-colors">
-          <td class="px-4 py-2 text-slate-400 text-[10px] whitespace-nowrap">${r.time}</td>
-          <td class="px-4 py-2 font-bold text-blue-400 text-xs">${tickerHtml}</td>
-          <td class="px-4 py-2 text-slate-200">${formatNumber(r.quantity)}</td>
-          <td class="px-4 py-2 text-slate-300">${formatNumber(r.price, 4)}</td>
-          <td class="px-4 py-2 text-right">
-            <button onclick="deleteHistoryRecord('${r.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors" title="刪除">${svgIconTrash}</button>
-          </td>
-        </tr>
-      `}).join('');
+      els.historyTableBody.innerHTML = tradeHistory.map(r => `
+        <tr class="hover:bg-white/[0.03] transition-colors">
+          <td class="px-6 py-3 text-slate-600 font-mono">${r.time}</td>
+          <td class="px-6 py-3 font-bold text-[#2979ff] cursor-pointer" onclick="selectTicker('${r.ticker}')">${r.ticker}</td>
+          <td class="px-6 py-3">${formatNumber(r.quantity)}</td>
+          <td class="px-6 py-3 text-slate-300">$${formatNumber(r.price, 4)}</td>
+          <td class="px-6 py-3 text-right"><button onclick="deleteHistoryRecord('${r.id}')" class="text-slate-600 hover:text-rose-500">${svgIconTrash}</button></td>
+        </tr>`).join('');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      loadData();             
-      calculateCore();        
-      calculateSingleTrade(); 
-      
-      if(els.tickerInput.value) {
-        fetchStockData();
-        if(els.autoRefreshCheckbox.checked) {
-          let sec = parseFloat(els.refreshIntervalInput.value) || 2;
-          if (sec < 1) sec = 1;
-          quoteInterval = setInterval(fetchQuoteOnly, sec * 1000);
-        }
+      const saved = JSON.parse(localStorage.getItem('stockCalcStateHTML_PRO_V3'));
+      if (saved) { 
+        records = saved.records || []; els.tickerInput.value = saved.ticker || ''; els.currentPriceDisp.value = saved.currentPrice || '';
+        els.autoRefreshCheckbox.checked = saved.autoRefresh; els.refreshIntervalInput.value = saved.refreshInterval || 2;
       }
+      tradeHistory = JSON.parse(localStorage.getItem('stockCalcHistory_PRO')) || [];
+      els.chartIntervalSelect.value = currentChartInterval;
+      calculateCore(); renderHistoryTable();
+      if(els.tickerInput.value) { fetchStockData(); if(els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); }
     });
   </script>
 </body>
