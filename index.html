@@ -104,7 +104,8 @@
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto space-y-4">
+  <!-- 解除寬度限制：採用 max-w-[1600px] 大版面設計 -->
+  <div class="max-w-[1600px] w-[96%] mx-auto space-y-4">
     
     <!-- 標題區塊 -->
     <header class="flex justify-between items-center pb-3 border-b border-[#333]">
@@ -122,25 +123,26 @@
       </button>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <!-- 改用 Flex 佈局：左側固定寬度，右側自適應填滿 -->
+    <div class="flex flex-col lg:flex-row gap-5">
       
       <!-- 左側：控制面板 -->
-      <div class="lg:col-span-5 space-y-3">
+      <div class="w-full lg:w-[340px] xl:w-[380px] shrink-0 space-y-3">
         
         <!-- API 抓價 -->
         <div class="card-panel p-3 rounded-xl">
           <div class="flex justify-between items-center mb-2">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">市場報價</h2>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-white">市場報價</h2>
             <div class="flex items-center space-x-1.5">
-              <select id="dataSourceSelect" class="bg-[#2a2a2a] text-[9px] text-white border border-[#444] rounded px-1 py-0.5 outline-none font-bold cursor-pointer focus:border-[#2979ff]">
+              <select id="dataSourceSelect" class="bg-[#2a2a2a] text-[10px] text-white border border-[#444] rounded px-1 py-0.5 outline-none font-bold cursor-pointer focus:border-[#2979ff]">
                 <option value="finnhub">來源: Finnhub</option>
                 <option value="twelvedata">來源: TwelveData</option>
               </select>
-              <label class="flex items-center text-[10px] text-slate-400 cursor-pointer hover:text-white transition-colors">
+              <label class="flex items-center text-[11px] text-slate-200 font-medium cursor-pointer hover:text-white transition-colors">
                 <input type="checkbox" id="autoRefreshCheckbox" class="mr-1 rounded border-[#444] bg-[#2a2a2a] text-[#2979ff] focus:ring-0">
                 <input type="number" id="refreshIntervalInput" value="2" min="1" class="w-7 text-center bg-transparent border-none p-0 text-[#2979ff] font-bold"> 秒
               </label>
-              <span class="text-[10px] font-normal cursor-help" title="連線正常">🟢</span>
+              <span class="text-[11px] font-normal cursor-help" title="連線正常">🟢</span>
             </div>
           </div>
           <div class="flex gap-2">
@@ -149,10 +151,10 @@
                 id="tickerInput"
                 type="text"
                 autocomplete="off"
-                class="w-full pl-3 pr-2 py-2 text-sm rounded-lg transition-all uppercase-input"
+                class="w-full pl-3 pr-2 py-2 text-sm font-bold rounded-lg transition-all uppercase-input"
                 placeholder="代號 (如: AAPL)"
               >
-              <div id="tickerDropdown" class="hidden absolute top-full left-0 w-full mt-1 bg-[#1e1e1e] border border-[#333] rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar"></div>
+              <div id="tickerDropdown" class="hidden absolute top-full left-0 w-full mt-1 bg-[#1e1e1e] border border-[#444] rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar"></div>
             </div>
             <button id="fetchBtn" class="btn-primary text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg disabled:opacity-50">
               抓取
@@ -162,22 +164,22 @@
 
         <!-- 新增買入 -->
         <div class="card-panel p-3 rounded-xl">
-          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-white mb-3 flex items-center">
             <svg class="mr-2 text-[#2979ff]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
             新增建倉紀錄
           </h2>
           <form id="addForm" class="space-y-2.5">
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-[10px] font-bold text-slate-500 mb-1">數量 (股)</label>
-                <input id="qtyInput" type="number" step="any" class="w-full px-3 py-2 text-sm rounded-lg" required>
+                <label class="block text-[11px] font-bold text-slate-200 mb-1">數量 (股)</label>
+                <input id="qtyInput" type="number" step="any" class="w-full px-3 py-2 text-sm font-bold rounded-lg border border-[#444]" required>
               </div>
               <div>
-                <label class="block text-[10px] font-bold text-slate-500 mb-1">價位</label>
-                <input id="priceInput" type="number" step="any" class="w-full px-3 py-2 text-sm rounded-lg" required>
+                <label class="block text-[11px] font-bold text-slate-200 mb-1">價位</label>
+                <input id="priceInput" type="number" step="any" class="w-full px-3 py-2 text-sm font-bold rounded-lg border border-[#444]" required>
               </div>
             </div>
-            <button type="submit" class="w-full bg-[#2a2a2a] hover:bg-[#333] text-white text-xs font-bold py-2 rounded-lg transition-colors border border-[#444]">
+            <button type="submit" class="w-full bg-[#2979ff] hover:bg-[#1c54b2] text-white text-sm font-bold py-2 rounded-lg transition-colors shadow-lg">
               加入計算模型
             </button>
           </form>
@@ -186,9 +188,9 @@
         <!-- 試算工具 (包含價位提醒) -->
         <div class="card-panel p-2 rounded-xl flex flex-col">
           <div class="flex space-x-1 bg-[#0F0F0F] p-1 rounded-lg mb-2 overflow-x-auto no-scrollbar">
-            <button id="btn-tab-target" onclick="switchTab('target')" class="flex-1 min-w-max text-[11px] py-1.5 px-2 rounded-md bg-[#2979ff] text-white font-bold transition-all">預期試算</button>
-            <button id="btn-tab-single" onclick="switchTab('single')" class="flex-1 min-w-max text-[11px] py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-300 transition-all">單筆計算</button>
-            <button id="btn-tab-alert" onclick="switchTab('alert')" class="flex-1 min-w-max text-[11px] py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-300 transition-all flex items-center justify-center gap-1">
+            <button id="btn-tab-target" onclick="switchTab('target')" class="flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md bg-[#2979ff] text-white font-bold transition-all">預期試算</button>
+            <button id="btn-tab-single" onclick="switchTab('single')" class="flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md text-slate-300 hover:text-white font-medium transition-all">單筆計算</button>
+            <button id="btn-tab-alert" onclick="switchTab('alert')" class="flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md text-slate-300 hover:text-white font-medium transition-all flex items-center justify-center gap-1">
               <span>🔔 提醒</span>
             </button>
           </div>
@@ -197,17 +199,17 @@
           <div id="tab-target" class="space-y-2 px-1 pb-1">
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-[10px] font-bold text-slate-500 mb-1">目標價</label>
-                <input id="targetPriceInput" type="number" step="any" class="w-full px-3 py-1.5 text-xs rounded-lg disabled:opacity-30" disabled>
+                <label class="block text-[11px] font-bold text-slate-200 mb-1">目標價</label>
+                <input id="targetPriceInput" type="number" step="any" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444] disabled:opacity-40" disabled>
               </div>
               <div>
-                <label class="block text-[10px] font-bold text-slate-500 mb-1">漲跌幅 (%)</label>
-                <input id="percentInput" type="number" step="any" class="w-full px-3 py-1.5 text-xs rounded-lg disabled:opacity-30" disabled>
+                <label class="block text-[11px] font-bold text-slate-200 mb-1">漲跌幅 (%)</label>
+                <input id="percentInput" type="number" step="any" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444] disabled:opacity-40" disabled>
               </div>
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">損益金額</label>
-              <input id="expectedPnlInput" type="number" step="any" class="w-full px-3 py-1.5 text-xs rounded-lg disabled:opacity-30" disabled>
+              <label class="block text-[11px] font-bold text-slate-200 mb-1">損益金額</label>
+              <input id="expectedPnlInput" type="number" step="any" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444] disabled:opacity-40" disabled>
             </div>
             <div id="pnlResult" class="hidden mt-2 space-y-2"></div>
           </div>
@@ -215,61 +217,61 @@
           <!-- Tab: 單筆計算 -->
           <div id="tab-single" class="hidden space-y-2 px-1 pb-1">
             <div class="grid grid-cols-2 gap-2">
-              <input id="singleCostInput" type="number" step="any" placeholder="買入價" class="w-full px-3 py-1.5 text-xs rounded-lg">
-              <input id="singleSellInput" type="number" step="any" placeholder="賣出價" class="w-full px-3 py-1.5 text-xs rounded-lg">
+              <input id="singleCostInput" type="number" step="any" placeholder="買入價" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444]">
+              <input id="singleSellInput" type="number" step="any" placeholder="賣出價" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444]">
             </div>
-            <input id="singleQtyInput" type="number" step="any" placeholder="股數 (選填)" class="w-full px-3 py-1.5 text-xs rounded-lg">
-            <div id="singleResult" class="hidden mt-2 p-2 rounded-lg border border-[#444] text-xs"></div>
+            <input id="singleQtyInput" type="number" step="any" placeholder="股數 (選填)" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444]">
+            <div id="singleResult" class="hidden mt-2 p-2 rounded-lg border border-[#555] text-sm bg-[#2a2a2a]"></div>
           </div>
 
           <!-- Tab: 價位提醒 -->
           <div id="tab-alert" class="hidden space-y-2 px-1 pb-1">
-            <div class="flex justify-between items-center mb-1.5">
+            <div class="flex justify-between items-center mb-2">
               <div class="flex items-center space-x-2">
-                <span class="text-[10px] text-slate-500 font-bold">鈴聲音量</span>
+                <span class="text-[11px] text-slate-200 font-bold">鈴聲音量</span>
                 <input type="range" id="alertVolume" min="0" max="1" step="0.1" value="0.5" class="w-16 cursor-pointer accent-[#2979ff] bg-[#2a2a2a] rounded-lg">
               </div>
               <div class="flex items-center space-x-1.5">
-                <span id="soundStatusText" class="text-[9px] text-slate-500">預設音效</span>
-                <label class="cursor-pointer bg-[#2a2a2a] hover:bg-[#333] border border-[#444] text-slate-300 text-[9px] px-2 py-0.5 rounded transition-colors">
-                  上傳
+                <span id="soundStatusText" class="text-[10px] text-slate-300">預設音效</span>
+                <label class="cursor-pointer bg-[#2a2a2a] hover:bg-[#444] border border-[#555] text-white text-[10px] font-medium px-2 py-0.5 rounded transition-colors">
+                  上傳音效
                   <input type="file" id="soundUploadInput" accept="audio/mpeg, audio/wav, audio/ogg, audio/mp3" class="hidden">
                 </label>
-                <button id="resetSoundBtn" class="hidden bg-rose-900/20 hover:bg-rose-900/50 text-rose-400 border border-rose-800/50 text-[9px] px-2 py-0.5 rounded transition-colors">重置</button>
+                <button id="resetSoundBtn" class="hidden bg-rose-900/40 hover:bg-rose-900/70 text-rose-300 border border-rose-800/70 text-[10px] px-2 py-0.5 rounded transition-colors">重置</button>
               </div>
             </div>
             <form id="alertForm" class="flex gap-2">
-              <select id="alertCondition" class="w-1/4 bg-[#2a2a2a] text-white text-xs rounded-lg px-1 border border-[#444] outline-none focus:border-[#2979ff]">
+              <select id="alertCondition" class="w-1/4 bg-[#2a2a2a] text-white text-xs font-bold rounded-lg px-1 border border-[#555] outline-none focus:border-[#2979ff]">
                 <option value=">">≥ 大於</option>
                 <option value="<">≤ 小於</option>
               </select>
-              <input id="alertPrice" type="number" step="any" placeholder="觸發價位" class="w-2/4 px-3 py-1.5 text-xs rounded-lg border border-[#444] bg-[#2a2a2a] text-white focus:border-[#2979ff] outline-none" required>
-              <select id="alertType" class="w-1/4 bg-[#2a2a2a] text-white text-[10px] rounded-lg px-1 border border-[#444] outline-none focus:border-[#2979ff]">
+              <input id="alertPrice" type="number" step="any" placeholder="觸發價位" class="w-2/4 px-3 py-1.5 text-sm font-bold rounded-lg border border-[#555] bg-[#2a2a2a] text-white focus:border-[#2979ff] outline-none" required>
+              <select id="alertType" class="w-1/4 bg-[#2a2a2a] text-white text-[11px] font-bold rounded-lg px-1 border border-[#555] outline-none focus:border-[#2979ff]">
                 <option value="multi" selected>持續</option>
                 <option value="once">單次</option>
               </select>
-              <button type="submit" class="bg-[#2979ff] hover:bg-[#1c54b2] text-white px-3 rounded-lg text-lg font-bold transition-colors">+</button>
+              <button type="submit" class="bg-[#2979ff] hover:bg-[#1c54b2] text-white px-3 rounded-lg text-lg font-bold transition-colors shadow-md">+</button>
             </form>
-            <div class="flex justify-between items-center mt-4 border-b border-[#333] pb-1">
-              <span class="text-xs text-slate-400">提醒列表 (<span id="alertCountDisplay">0</span>)</span>
+            <div class="flex justify-between items-center mt-4 border-b border-[#444] pb-1.5">
+              <span class="text-sm font-bold text-slate-200">提醒列表 (<span id="alertCountDisplay">0</span>)</span>
             </div>
             <div class="grid grid-cols-2 gap-2 mt-2">
               <div class="flex flex-col">
-                <div class="text-[10px] font-bold text-[#00e676] mb-1.5 text-center bg-[#00e676]/10 py-1 rounded">📈 漲破 (≥)</div>
+                <div class="text-[11px] font-bold text-[#00e676] mb-1.5 text-center bg-[#00e676]/10 border border-[#00e676]/20 py-1 rounded">📈 漲破 (≥)</div>
                 <div id="alertListUp" class="space-y-1.5 pb-2"></div>
               </div>
               <div class="flex flex-col">
-                <div class="text-[10px] font-bold text-[#ff5252] mb-1.5 text-center bg-[#ff5252]/10 py-1 rounded">📉 跌破 (≤)</div>
+                <div class="text-[11px] font-bold text-[#ff5252] mb-1.5 text-center bg-[#ff5252]/10 border border-[#ff5252]/20 py-1 rounded">📉 跌破 (≤)</div>
                 <div id="alertListDown" class="space-y-1.5 pb-2"></div>
               </div>
             </div>
-            <div class="text-[9px] text-slate-500 mt-2 text-center">💡 背景刷新自動監控，可手動開關提醒</div>
+            <div class="text-[10px] font-medium text-slate-300 mt-2 text-center">💡 背景刷新自動監控，可手動開關提醒</div>
           </div>
         </div>
       </div>
 
-      <!-- 右側：看板、圖表與列表 -->
-      <div class="lg:col-span-7 space-y-4">
+      <!-- 右側：看板、圖表與列表 (flex-1 讓它自由填滿剩餘的巨大空間) -->
+      <div class="flex-1 min-w-0 space-y-4">
         
         <!-- 核心看板 -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -390,6 +392,7 @@
     let savedVolume = localStorage.getItem('stockCalcVolume_PRO');
     let currentVolume = savedVolume !== null ? parseFloat(savedVolume) : 0.5;
 
+    // --- DOM Elements ---
     const els = {
       // Modal & Toasts
       toastContainer: document.getElementById('toastContainer'),
@@ -481,6 +484,7 @@
     };
 
     window.showModal = function({ title, text, type = 'alert', inputValue = '', onConfirm }) {
+      if(!els.universalModal) return;
       els.uModalTitle.innerHTML = title || '系統提示';
       els.uModalText.innerHTML = text || '';
       
@@ -510,33 +514,40 @@
     };
 
     function closeModal() {
+      if(!els.universalModal) return;
       els.universalModal.classList.add('hidden');
       els.universalModal.classList.remove('flex');
     }
 
     // --- API Key 設置專屬 Modal ---
-    els.apiKeyBtn.addEventListener('click', () => {
-      els.finnhubKeyInput.value = FINNHUB_API_KEY;
-      els.twelveDataKeyInput.value = TWELVE_DATA_API_KEY;
-      els.apiSettingsModal.classList.remove('hidden');
-      els.apiSettingsModal.classList.add('flex');
-    });
+    if(els.apiKeyBtn) {
+      els.apiKeyBtn.addEventListener('click', () => {
+        els.finnhubKeyInput.value = FINNHUB_API_KEY;
+        els.twelveDataKeyInput.value = TWELVE_DATA_API_KEY;
+        els.apiSettingsModal.classList.remove('hidden');
+        els.apiSettingsModal.classList.add('flex');
+      });
+    }
 
-    els.apiModalCancel.addEventListener('click', () => {
-      els.apiSettingsModal.classList.add('hidden');
-      els.apiSettingsModal.classList.remove('flex');
-    });
+    if(els.apiModalCancel) {
+      els.apiModalCancel.addEventListener('click', () => {
+        els.apiSettingsModal.classList.add('hidden');
+        els.apiSettingsModal.classList.remove('flex');
+      });
+    }
 
-    els.apiModalSave.addEventListener('click', () => {
-      FINNHUB_API_KEY = els.finnhubKeyInput.value.trim();
-      TWELVE_DATA_API_KEY = els.twelveDataKeyInput.value.trim();
-      localStorage.setItem(STORAGE_KEY_FINNHUB, FINNHUB_API_KEY);
-      localStorage.setItem(STORAGE_KEY_TWELVEDATA, TWELVE_DATA_API_KEY);
-      
-      els.apiSettingsModal.classList.add('hidden');
-      els.apiSettingsModal.classList.remove('flex');
-      showToast('✅ API Keys 已儲存更新', 'success');
-    });
+    if(els.apiModalSave) {
+      els.apiModalSave.addEventListener('click', () => {
+        FINNHUB_API_KEY = els.finnhubKeyInput.value.trim();
+        TWELVE_DATA_API_KEY = els.twelveDataKeyInput.value.trim();
+        localStorage.setItem(STORAGE_KEY_FINNHUB, FINNHUB_API_KEY);
+        localStorage.setItem(STORAGE_KEY_TWELVEDATA, TWELVE_DATA_API_KEY);
+        
+        els.apiSettingsModal.classList.add('hidden');
+        els.apiSettingsModal.classList.remove('flex');
+        showToast('✅ API Keys 已儲存更新', 'success');
+      });
+    }
 
     // --- 桌面通知 (Browser Notification) ---
     function requestNotificationPermission() {
@@ -571,13 +582,13 @@
 
     function updateSoundUI() {
       if (customSoundData) {
-        els.soundStatusText.textContent = '自訂音效';
-        els.soundStatusText.className = 'text-[9px] text-[#00e676] font-bold';
-        els.resetSoundBtn.classList.remove('hidden');
+        if(els.soundStatusText) els.soundStatusText.textContent = '自訂音效';
+        if(els.soundStatusText) els.soundStatusText.className = 'text-[10px] text-[#00e676] font-bold';
+        if(els.resetSoundBtn) els.resetSoundBtn.classList.remove('hidden');
       } else {
-        els.soundStatusText.textContent = '預設音效';
-        els.soundStatusText.className = 'text-[9px] text-slate-500';
-        els.resetSoundBtn.classList.add('hidden');
+        if(els.soundStatusText) els.soundStatusText.textContent = '預設音效';
+        if(els.soundStatusText) els.soundStatusText.className = 'text-[10px] text-slate-300 font-medium';
+        if(els.resetSoundBtn) els.resetSoundBtn.classList.add('hidden');
       }
     }
 
@@ -591,45 +602,50 @@
       } catch(e) {}
     }
 
-    els.alertVolume.value = currentVolume;
-    els.alertVolume.addEventListener('input', (e) => {
-      currentVolume = parseFloat(e.target.value);
-      localStorage.setItem('stockCalcVolume_PRO', currentVolume);
-      playAlertSound(); 
-    });
+    if(els.alertVolume) {
+      els.alertVolume.value = currentVolume;
+      els.alertVolume.addEventListener('input', (e) => {
+        currentVolume = parseFloat(e.target.value);
+        localStorage.setItem('stockCalcVolume_PRO', currentVolume);
+        playAlertSound(); 
+      });
+    }
 
-    els.soundUploadInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (file.size > 2 * 1024 * 1024) {
-        showToast('檔案過大！請上傳小於 2MB 的音效檔', 'error');
+    if(els.soundUploadInput) {
+      els.soundUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+          showToast('檔案過大！請上傳小於 2MB 的音效檔', 'error');
+          e.target.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          customSoundData = evt.target.result;
+          localStorage.setItem('stockCalcCustomSound_PRO', customSoundData);
+          alertAudio.src = customSoundData;
+          updateSoundUI();
+          showToast('自訂音效上傳成功', 'success');
+          playAlertSound();
+        };
+        reader.readAsDataURL(file);
         e.target.value = '';
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        customSoundData = evt.target.result;
-        localStorage.setItem('stockCalcCustomSound_PRO', customSoundData);
-        alertAudio.src = customSoundData;
-        updateSoundUI();
-        showToast('自訂音效上傳成功', 'success');
-        playAlertSound();
-      };
-      reader.readAsDataURL(file);
-      e.target.value = '';
-    });
+      });
+    }
 
-    els.resetSoundBtn.addEventListener('click', () => {
-      customSoundData = null;
-      localStorage.removeItem('stockCalcCustomSound_PRO');
-      alertAudio.src = defaultSoundUrl;
-      updateSoundUI();
-      showToast('已恢復預設音效', 'info');
-      playAlertSound();
-    });
+    if(els.resetSoundBtn) {
+      els.resetSoundBtn.addEventListener('click', () => {
+        customSoundData = null;
+        localStorage.removeItem('stockCalcCustomSound_PRO');
+        alertAudio.src = defaultSoundUrl;
+        updateSoundUI();
+        showToast('已恢復預設音效', 'info');
+        playAlertSound();
+      });
+    }
 
     const svgIconTrash = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
-    const svgIconBell = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
 
     // --- 資料加載與自動遷移邏輯 ---
     function loadAndMigrateData() {
@@ -643,14 +659,14 @@
       }
       if (saved) {
         records = saved.records || [];
-        els.tickerInput.value = saved.ticker || '';
-        els.currentPriceDisp.value = saved.currentPrice || '';
-        els.autoRefreshCheckbox.checked = saved.autoRefresh || false;
-        els.refreshIntervalInput.value = saved.refreshInterval || 2;
-        if(saved.dataSource) els.dataSourceSelect.value = saved.dataSource;
+        if(els.tickerInput) els.tickerInput.value = saved.ticker || '';
+        if(els.currentPriceDisp) els.currentPriceDisp.value = saved.currentPrice || '';
+        if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = saved.autoRefresh || false;
+        if(els.refreshIntervalInput) els.refreshIntervalInput.value = saved.refreshInterval || 2;
+        if(saved.dataSource && els.dataSourceSelect) els.dataSourceSelect.value = saved.dataSource;
       }
       tradeHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY)) || [];
-      els.chartIntervalSelect.value = currentChartInterval;
+      if(els.chartIntervalSelect) els.chartIntervalSelect.value = currentChartInterval;
       
       calculateCore();
       renderHistoryTable();
@@ -667,14 +683,15 @@
     }
 
     function renderTickerDropdown() {
+      if(!els.tickerDropdown) return;
       if (savedTickers.length === 0) {
-        els.tickerDropdown.innerHTML = '<div class="px-4 py-3 text-xs text-slate-500">無紀錄</div>';
+        els.tickerDropdown.innerHTML = '<div class="px-4 py-3 text-sm font-medium text-slate-300">無紀錄</div>';
         return;
       }
       els.tickerDropdown.innerHTML = savedTickers.map(t => `
         <div class="flex justify-between items-center px-4 py-2 hover:bg-[#2a2a2a] cursor-pointer group transition-colors" onclick="selectTicker('${t}')">
-          <span class="font-bold text-slate-200 text-xs">${t}</span>
-          <button onclick="removeSavedTicker('${t}', event)" class="text-slate-500 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
+          <span class="font-bold text-white text-sm">${t}</span>
+          <button onclick="removeSavedTicker('${t}', event)" class="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
             ${svgIconTrash}
           </button>
         </div>
@@ -682,8 +699,8 @@
     }
 
     window.selectTicker = function(ticker) {
-      els.tickerInput.value = ticker;
-      els.tickerDropdown.classList.add('hidden');
+      if(els.tickerInput) els.tickerInput.value = ticker;
+      if(els.tickerDropdown) els.tickerDropdown.classList.add('hidden');
       fetchStockData();
     };
 
@@ -694,12 +711,13 @@
       renderTickerDropdown();
     };
 
-    els.tickerInput.addEventListener('focus', () => { renderTickerDropdown(); els.tickerDropdown.classList.remove('hidden'); });
-    document.addEventListener('click', (e) => { if (!els.tickerInputContainer.contains(e.target)) els.tickerDropdown.classList.add('hidden'); });
+    if(els.tickerInput) els.tickerInput.addEventListener('focus', () => { renderTickerDropdown(); if(els.tickerDropdown) els.tickerDropdown.classList.remove('hidden'); });
+    document.addEventListener('click', (e) => { if (els.tickerInputContainer && !els.tickerInputContainer.contains(e.target) && els.tickerDropdown) els.tickerDropdown.classList.add('hidden'); });
 
     // --- 價位提醒邏輯 ---
     function renderAlerts() {
-      const currentSym = els.tickerInput.value.toUpperCase().trim();
+      if(!els.alertListUp || !els.alertListDown) return;
+      const currentSym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
       if(els.alertCountDisplay) els.alertCountDisplay.textContent = priceAlerts.length;
 
       // 自動按價格由大到小排序
@@ -709,18 +727,18 @@
       const downAlerts = priceAlerts.filter(a => a.condition === '<');
 
       const renderList = (list, isUpType) => {
-        if (list.length === 0) return '<div class="text-center text-[10px] text-slate-600 py-3">無設定</div>';
+        if (list.length === 0) return '<div class="text-center text-[11px] font-medium text-slate-400 py-3">無設定</div>';
         return list.map(a => {
           if (a.isActive === undefined) a.isActive = true;
           const typeText = a.type === 'multi' ? '持續' : '單次';
-          const priceColor = a.isActive ? (isUpType ? 'text-[#00e676]' : 'text-[#ff5252]') : 'text-slate-500';
+          const priceColor = a.isActive ? (isUpType ? 'text-[#00e676]' : 'text-[#ff5252]') : 'text-slate-400';
           
           return `
-          <div class="flex flex-col py-1.5 px-2 border border-[#333] rounded-lg bg-[#2a2a2a] group relative transition-opacity ${a.ticker !== currentSym ? 'opacity-40 hover:opacity-100' : ''}">
+          <div class="flex flex-col py-1.5 px-2 border border-[#444] rounded-lg bg-[#2a2a2a] group relative transition-opacity ${a.ticker !== currentSym ? 'opacity-50 hover:opacity-100' : ''}">
             <div class="flex justify-between items-center mb-0.5">
               <span class="text-[13px] font-bold ${priceColor}">${a.price}</span>
               <div class="flex items-center space-x-1.5">
-                <button onclick="deleteAlert('${a.id}')" class="text-slate-600 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5" title="刪除">
+                <button onclick="deleteAlert('${a.id}')" class="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5" title="刪除">
                   ${svgIconTrash}
                 </button>
                 <label class="cursor-pointer relative inline-block w-7 h-4 rounded-full">
@@ -730,8 +748,8 @@
               </div>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-[10px] ${a.ticker !== currentSym ? 'text-[#2979ff] font-bold' : 'text-slate-400 font-bold'}">${a.ticker}</span>
-              <span class="text-[9px] text-slate-500">${typeText}</span>
+              <span class="text-[11px] ${a.ticker !== currentSym ? 'text-[#2979ff] font-bold' : 'text-slate-200 font-bold'}">${a.ticker}</span>
+              <span class="text-[10px] font-medium text-slate-300">${typeText}</span>
             </div>
           </div>
           `
@@ -752,24 +770,26 @@
       }
     };
 
-    els.alertForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const sym = els.tickerInput.value.toUpperCase().trim();
-      if(!sym) return showToast('請先在上方輸入或抓取要監控的代號', 'error');
-      
-      const p = parseFloat(els.alertPrice.value);
-      const c = els.alertCondition.value;
-      const t = els.alertType ? els.alertType.value : 'once';
-      
-      priceAlerts.unshift({ id: Date.now().toString(), ticker: sym, condition: c, price: p, type: t, isTriggered: false, isActive: true });
-      localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(priceAlerts));
-      
-      els.alertPrice.value = '';
-      renderAlerts();
-      showToast(`✅ 已新增提醒：當 ${sym} ${c === '>' ? '漲到' : '跌到'} ${p} 時通知`, 'success');
-      
-      requestNotificationPermission();
-    });
+    if(els.alertForm) {
+      els.alertForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const sym = els.tickerInput.value.toUpperCase().trim();
+        if(!sym) return showToast('請先在上方輸入或抓取要監控的代號', 'error');
+        
+        const p = parseFloat(els.alertPrice.value);
+        const c = els.alertCondition.value;
+        const t = els.alertType ? els.alertType.value : 'once';
+        
+        priceAlerts.unshift({ id: Date.now().toString(), ticker: sym, condition: c, price: p, type: t, isTriggered: false, isActive: true });
+        localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(priceAlerts));
+        
+        els.alertPrice.value = '';
+        renderAlerts();
+        showToast(`✅ 已新增提醒：當 ${sym} ${c === '>' ? '漲到' : '跌到'} ${p} 時通知`, 'success');
+        
+        requestNotificationPermission();
+      });
+    }
 
     window.deleteAlert = function(id) {
       priceAlerts = priceAlerts.filter(a => a.id !== id);
@@ -826,47 +846,48 @@
     window.switchRecordsTab = function(tab) {
       activeRecordsTab = tab;
       const isCurrent = tab === 'current';
-      els.tabBtnCurrent.className = isCurrent ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all';
-      els.tabBtnHistory.className = !isCurrent ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all';
-      els.currentRecordsView.classList.toggle('hidden', !isCurrent);
-      els.historyRecordsView.classList.toggle('hidden', isCurrent);
-      els.clearBtn.classList.toggle('hidden', !isCurrent || records.length === 0);
-      els.clearHistoryBtn.classList.toggle('hidden', isCurrent || tradeHistory.length === 0);
+      if(els.tabBtnCurrent) els.tabBtnCurrent.className = isCurrent ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all';
+      if(els.tabBtnHistory) els.tabBtnHistory.className = !isCurrent ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all';
+      if(els.currentRecordsView) els.currentRecordsView.classList.toggle('hidden', !isCurrent);
+      if(els.historyRecordsView) els.historyRecordsView.classList.toggle('hidden', isCurrent);
+      if(els.clearBtn) els.clearBtn.classList.toggle('hidden', !isCurrent || records.length === 0);
+      if(els.clearHistoryBtn) els.clearHistoryBtn.classList.toggle('hidden', isCurrent || tradeHistory.length === 0);
     };
 
     function switchTab(tabId) {
       ['target', 'single', 'alert'].forEach(t => {
         const active = t === tabId;
-        document.getElementById(`tab-${t}`).classList.toggle('hidden', !active);
+        const tabEl = document.getElementById(`tab-${t}`);
+        if(tabEl) tabEl.classList.toggle('hidden', !active);
         const btn = document.getElementById(`btn-tab-${t}`);
         if(btn) {
-            btn.className = active ? 'flex-1 min-w-max text-[11px] py-1.5 px-2 rounded-md bg-[#2979ff] text-white font-bold transition-all flex items-center justify-center gap-1' 
-                                   : 'flex-1 min-w-max text-[11px] py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-300 transition-all flex items-center justify-center gap-1';
+            btn.className = active ? 'flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md bg-[#2979ff] text-white font-bold transition-all flex items-center justify-center gap-1' 
+                                   : 'flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md text-slate-300 hover:text-white font-medium transition-all flex items-center justify-center gap-1';
         }
       });
     }
 
     // --- 報價來源與 API 邏輯 ---
-    
-    // 當切換為 Twelve Data 時，自動防呆確保刷新頻率不過高
-    els.dataSourceSelect.addEventListener('change', (e) => {
-      const source = e.target.value;
-      if (source === 'twelvedata') {
-        if (parseFloat(els.refreshIntervalInput.value) < 10) {
-          els.refreshIntervalInput.value = 10;
-          showToast('已切換為全市場報價。為配合免費額度，已將刷新間距調整為 10 秒', 'info');
-          if (els.autoRefreshCheckbox.checked) {
-            clearInterval(quoteInterval);
-            quoteInterval = setInterval(fetchQuoteOnly, 10000);
+    if(els.dataSourceSelect) {
+      els.dataSourceSelect.addEventListener('change', (e) => {
+        const source = e.target.value;
+        if (source === 'twelvedata') {
+          if (parseFloat(els.refreshIntervalInput.value) < 10) {
+            els.refreshIntervalInput.value = 10;
+            showToast('已切換為全市場報價。為配合免費額度，已將刷新間距調整為 10 秒', 'info');
+            if (els.autoRefreshCheckbox.checked) {
+              clearInterval(quoteInterval);
+              quoteInterval = setInterval(fetchQuoteOnly, 10000);
+            }
           }
         }
-      }
-      saveData();
-    });
+        saveData();
+      });
+    }
 
     function renderTradingViewWidget(symbol, interval) {
       if (typeof TradingView === 'undefined') return;
-      els.tvchartContainer.innerHTML = '';
+      if(els.tvchartContainer) els.tvchartContainer.innerHTML = '';
       new TradingView.widget({
         "autosize": true,
         "symbol": symbol.includes(":") ? symbol : "BATS:" + symbol,
@@ -884,23 +905,25 @@
       currentChartSymbol = symbol;
     }
 
-    els.chartIntervalSelect.addEventListener('change', (e) => {
-      currentChartInterval = e.target.value;
-      localStorage.setItem(STORAGE_KEY_INTERVAL, currentChartInterval);
-      if (currentChartSymbol) renderTradingViewWidget(currentChartSymbol, currentChartInterval);
-    });
+    if(els.chartIntervalSelect) {
+      els.chartIntervalSelect.addEventListener('change', (e) => {
+        currentChartInterval = e.target.value;
+        localStorage.setItem(STORAGE_KEY_INTERVAL, currentChartInterval);
+        if (currentChartSymbol) renderTradingViewWidget(currentChartSymbol, currentChartInterval);
+      });
+    }
 
     async function fetchStockData() {
+      if(!els.tickerInput) return;
       const symbol = els.tickerInput.value.toUpperCase().trim();
       if (!symbol) return showToast('請輸入股票代號！', 'error');
       
       addSavedTicker(symbol);
-      els.fetchBtn.textContent = "..";
-      els.fetchBtn.disabled = true;
+      if(els.fetchBtn) { els.fetchBtn.textContent = ".."; els.fetchBtn.disabled = true; }
       
       if (symbol !== currentChartSymbol) renderTradingViewWidget(symbol, currentChartInterval);
       
-      const source = els.dataSourceSelect.value;
+      const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
 
       try {
         if (source === 'finnhub') {
@@ -909,7 +932,7 @@
           if (res.status === 429) return showToast('API 呼叫頻率過高，請稍候', 'error');
           const data = await res.json();
           if (data && data.c) { 
-            els.currentPriceDisp.value = data.c; 
+            if(els.currentPriceDisp) els.currentPriceDisp.value = data.c; 
             updateCurrentPriceColor(); checkPriceAlerts(symbol, data.c); saveData(); 
           }
         } else {
@@ -921,7 +944,7 @@
           
           if (data && data.price) {
             const price = parseFloat(data.price);
-            els.currentPriceDisp.value = price;
+            if(els.currentPriceDisp) els.currentPriceDisp.value = price;
             updateCurrentPriceColor(); checkPriceAlerts(symbol, price); saveData();
           } else {
              showToast('無法取得該代號之全市場報價', 'error');
@@ -930,36 +953,39 @@
       } catch (err) { 
         console.error(err); 
       } finally { 
-        els.fetchBtn.textContent = "抓取"; els.fetchBtn.disabled = false; 
+        if(els.fetchBtn) { els.fetchBtn.textContent = "抓取"; els.fetchBtn.disabled = false; }
       }
     }
 
     async function fetchQuoteOnly() {
+      if(!els.tickerInput) return;
       const symbol = els.tickerInput.value.toUpperCase().trim();
       if (!symbol) return;
-      const source = els.dataSourceSelect.value;
+      const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
 
       try {
         if (source === 'finnhub') {
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
           if (res.status === 429) {
-            els.autoRefreshCheckbox.checked = false; clearInterval(quoteInterval);
+            if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = false; 
+            clearInterval(quoteInterval);
             showToast('自動刷新暫停 (達 Finnhub API 限制)', 'error'); return;
           }
           const data = await res.json();
-          if (data && data.c && parseFloat(els.currentPriceDisp.value) !== data.c) { 
+          if (data && data.c && els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== data.c) { 
             els.currentPriceDisp.value = data.c; updateCurrentPriceColor(); checkPriceAlerts(symbol, data.c);
           }
         } else {
            const res = await fetch(`https://api.twelvedata.com/price?symbol=${symbol}&apikey=${TWELVE_DATA_API_KEY}`);
            const data = await res.json();
            if (data.code === 429) {
-              els.autoRefreshCheckbox.checked = false; clearInterval(quoteInterval);
+              if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = false; 
+              clearInterval(quoteInterval);
               showToast('自動刷新暫停 (達 TwelveData API 限制)', 'error'); return;
            }
            if (data && data.price) {
               const price = parseFloat(data.price);
-              if (parseFloat(els.currentPriceDisp.value) !== price) {
+              if (els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== price) {
                 els.currentPriceDisp.value = price; updateCurrentPriceColor(); checkPriceAlerts(symbol, price);
               }
            }
@@ -967,37 +993,43 @@
       } catch (err) {}
     }
 
-    els.autoRefreshCheckbox.addEventListener('change', (e) => {
-      if (e.target.checked) { 
-        if(!els.tickerInput.value.trim()) {
-            e.target.checked = false;
-            return showToast('請先輸入代號才能刷新', 'error');
+    if(els.autoRefreshCheckbox) {
+      els.autoRefreshCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked) { 
+          if(!els.tickerInput || !els.tickerInput.value.trim()) {
+              e.target.checked = false;
+              return showToast('請先輸入代號才能刷新', 'error');
+          }
+          fetchQuoteOnly(); 
+          let sec = Math.max(1, parseFloat(els.refreshIntervalInput.value) || 2); 
+          quoteInterval = setInterval(fetchQuoteOnly, sec * 1000); 
         }
-        fetchQuoteOnly(); 
-        let sec = Math.max(1, parseFloat(els.refreshIntervalInput.value) || 2); 
-        quoteInterval = setInterval(fetchQuoteOnly, sec * 1000); 
-      }
-      else clearInterval(quoteInterval);
-      saveData();
-    });
+        else clearInterval(quoteInterval);
+        saveData();
+      });
+    }
 
-    els.refreshIntervalInput.addEventListener('input', () => { 
-      if (els.autoRefreshCheckbox.checked) { 
-        clearInterval(quoteInterval); 
-        let sec = Math.max(1, parseFloat(els.refreshIntervalInput.value) || 2); 
-        quoteInterval = setInterval(fetchQuoteOnly, sec * 1000); 
-      } 
-      saveData(); 
-    });
+    if(els.refreshIntervalInput) {
+      els.refreshIntervalInput.addEventListener('input', () => { 
+        if (els.autoRefreshCheckbox && els.autoRefreshCheckbox.checked) { 
+          clearInterval(quoteInterval); 
+          let sec = Math.max(1, parseFloat(els.refreshIntervalInput.value) || 2); 
+          quoteInterval = setInterval(fetchQuoteOnly, sec * 1000); 
+        } 
+        saveData(); 
+      });
+    }
 
-    els.fetchBtn.addEventListener('click', fetchStockData);
-    els.tickerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); fetchStockData(); }});
+    if(els.fetchBtn) els.fetchBtn.addEventListener('click', fetchStockData);
+    if(els.tickerInput) els.tickerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); fetchStockData(); }});
 
     function saveData() {
       localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify({
-        records, ticker: els.tickerInput.value, currentPrice: els.currentPriceDisp.value,
-        autoRefresh: els.autoRefreshCheckbox.checked, refreshInterval: els.refreshIntervalInput.value,
-        dataSource: els.dataSourceSelect.value
+        records, ticker: els.tickerInput ? els.tickerInput.value : '', 
+        currentPrice: els.currentPriceDisp ? els.currentPriceDisp.value : '',
+        autoRefresh: els.autoRefreshCheckbox ? els.autoRefreshCheckbox.checked : false, 
+        refreshInterval: els.refreshIntervalInput ? els.refreshIntervalInput.value : 2,
+        dataSource: els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub'
       }));
     }
 
@@ -1005,54 +1037,57 @@
       totalShares = records.reduce((s, r) => s + r.quantity, 0);
       totalCost = records.reduce((s, r) => s + r.cost, 0);
       averagePrice = totalShares > 0 ? totalCost / totalShares : 0;
-      els.totalSharesDisp.textContent = formatNumber(totalShares);
-      els.totalCostDisp.textContent = formatNumber(totalCost);
-      els.avgPriceDisp.textContent = formatNumber(averagePrice, 4);
+      if(els.totalSharesDisp) els.totalSharesDisp.textContent = formatNumber(totalShares);
+      if(els.totalCostDisp) els.totalCostDisp.textContent = formatNumber(totalCost);
+      if(els.avgPriceDisp) els.avgPriceDisp.textContent = formatNumber(averagePrice, 4);
       const dis = totalShares === 0;
-      els.targetPriceInput.disabled = dis; els.percentInput.disabled = dis; els.expectedPnlInput.disabled = dis;
+      if(els.targetPriceInput) els.targetPriceInput.disabled = dis; 
+      if(els.percentInput) els.percentInput.disabled = dis; 
+      if(els.expectedPnlInput) els.expectedPnlInput.disabled = dis;
       calculatePnl(); renderTable(); updateCurrentPriceColor(); saveData();
     }
 
-    els.targetPriceInput.addEventListener('input', () => { activeTargetMode = 'price'; calculatePnl(); });
-    els.percentInput.addEventListener('input', () => { activeTargetMode = 'percent'; calculatePnl(); });
-    els.expectedPnlInput.addEventListener('input', () => { activeTargetMode = 'pnl'; calculatePnl(); });
+    if(els.targetPriceInput) els.targetPriceInput.addEventListener('input', () => { activeTargetMode = 'price'; calculatePnl(); });
+    if(els.percentInput) els.percentInput.addEventListener('input', () => { activeTargetMode = 'percent'; calculatePnl(); });
+    if(els.expectedPnlInput) els.expectedPnlInput.addEventListener('input', () => { activeTargetMode = 'pnl'; calculatePnl(); });
 
     function calculatePnl() {
+      if(!els.pnlResult) return;
       if (totalShares === 0 || averagePrice <= 0) { els.pnlResult.classList.add('hidden'); return; }
       els.pnlResult.classList.remove('hidden');
       let html = '';
-      if (activeTargetMode === 'price') {
+      if (activeTargetMode === 'price' && els.targetPriceInput) {
         const val = parseFloat(els.targetPriceInput.value);
         if (!isNaN(val)) {
           const p = (val - averagePrice) * totalShares, pct = ((val - averagePrice) / averagePrice) * 100;
           const color = p >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
-          html = `<div class="p-3 rounded-xl bg-[#2a2a2a] border border-[#444]"><div class="flex justify-between items-center mb-1"><span class="text-slate-500">預估損益</span><span class="font-bold ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}</span></div><div class="flex justify-between items-center"><span class="text-slate-500">報酬率</span><span class="font-bold ${color}">${pct >= 0 ? '+' : ''}${formatNumber(pct)}%</span></div></div>`;
+          html = `<div class="p-3 rounded-xl bg-[#2a2a2a] border border-[#444]"><div class="flex justify-between items-center mb-1"><span class="text-slate-200 font-medium">預估損益</span><span class="font-bold text-sm ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}</span></div><div class="flex justify-between items-center"><span class="text-slate-200 font-medium">報酬率</span><span class="font-bold text-sm ${color}">${pct >= 0 ? '+' : ''}${formatNumber(pct)}%</span></div></div>`;
         }
-      } else if (activeTargetMode === 'percent') {
+      } else if (activeTargetMode === 'percent' && els.percentInput) {
         let val = Math.abs(parseFloat(els.percentInput.value));
         if (!isNaN(val)) {
           const upP = averagePrice * (1 + val/100), dwP = averagePrice * (1 - val/100);
           const upPn = (upP - averagePrice) * totalShares, dwPn = (dwP - averagePrice) * totalShares;
           html = `
             <div class="p-2.5 rounded-xl bg-[#00e676]/10 border border-[#00e676]/30 text-[11px]">
-              <div class="flex justify-between"><span>上漲 ${val}%</span><span class="font-bold text-[#00e676]">${formatNumber(upP, 4)}</span></div>
-              <div class="mt-1 flex justify-between opacity-70"><span>預估損益</span><span class="font-bold text-[#00e676]">+${formatNumber(upPn)}</span></div>
+              <div class="flex justify-between"><span class="text-slate-200 font-medium">上漲 ${val}%</span><span class="font-bold text-sm text-[#00e676]">${formatNumber(upP, 4)}</span></div>
+              <div class="mt-1 flex justify-between opacity-90 text-slate-300"><span class="font-medium">預估損益</span><span class="font-bold text-[#00e676]">+${formatNumber(upPn)}</span></div>
             </div>
-            <div class="p-2.5 rounded-xl bg-[#ff5252]/10 border border-[#ff5252]/30 text-[11px]">
-              <div class="flex justify-between"><span>下跌 ${val}%</span><span class="font-bold text-[#ff5252]">${formatNumber(dwP, 4)}</span></div>
-              <div class="mt-1 flex justify-between opacity-70"><span>預估損益</span><span class="font-bold text-[#ff5252]">${formatNumber(dwPn)}</span></div>
+            <div class="p-2.5 rounded-xl bg-[#ff5252]/10 border border-[#ff5252]/30 text-[11px] mt-2">
+              <div class="flex justify-between"><span class="text-slate-200 font-medium">下跌 ${val}%</span><span class="font-bold text-sm text-[#ff5252]">${formatNumber(dwP, 4)}</span></div>
+              <div class="mt-1 flex justify-between opacity-90 text-slate-300"><span class="font-medium">預估損益</span><span class="font-bold text-[#ff5252]">${formatNumber(dwPn)}</span></div>
             </div>`;
         }
-      } else if (activeTargetMode === 'pnl') {
+      } else if (activeTargetMode === 'pnl' && els.expectedPnlInput) {
         let val = Math.abs(parseFloat(els.expectedPnlInput.value));
         if (!isNaN(val)) {
           const upP = averagePrice + (val/totalShares), dwP = averagePrice - (val/totalShares);
           html = `
             <div class="p-2.5 rounded-xl bg-[#00e676]/10 border border-[#00e676]/30 text-[11px]">
-              <div class="flex justify-between"><span>獲利 +${formatNumber(val)}</span><span class="font-bold text-[#00e676]">${formatNumber(upP, 4)}</span></div>
+              <div class="flex justify-between"><span class="text-slate-200 font-medium">獲利 +${formatNumber(val)}</span><span class="font-bold text-sm text-[#00e676]">${formatNumber(upP, 4)}</span></div>
             </div>
-            <div class="p-2.5 rounded-xl bg-[#ff5252]/10 border border-[#ff5252]/30 text-[11px]">
-              <div class="flex justify-between"><span>虧損 -${formatNumber(val)}</span><span class="font-bold text-[#ff5252]">${formatNumber(dwP, 4)}</span></div>
+            <div class="p-2.5 rounded-xl bg-[#ff5252]/10 border border-[#ff5252]/30 text-[11px] mt-2">
+              <div class="flex justify-between"><span class="text-slate-200 font-medium">虧損 -${formatNumber(val)}</span><span class="font-bold text-sm text-[#ff5252]">${formatNumber(dwP, 4)}</span></div>
             </div>`;
         }
       }
@@ -1060,22 +1095,27 @@
     }
 
     function calculateSingleTrade() {
+      if(!els.singleCostInput || !els.singleSellInput || !els.singleQtyInput || !els.singleResult) return;
       const c = parseFloat(els.singleCostInput.value), s = parseFloat(els.singleSellInput.value), q = parseFloat(els.singleQtyInput.value);
       if (!isNaN(c) && !isNaN(s)) {
         els.singleResult.classList.remove('hidden');
         const d = s - c, p = (d / c) * 100, color = d >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
-        let h = `<div class="flex justify-between"><span>價差</span><span class="font-bold ${color}">${d >= 0 ? '+' : ''}${formatNumber(d, 4)}</span></div><div class="flex justify-between"><span>報酬</span><span class="font-bold ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}%</span></div>`;
-        if (q > 0) h += `<div class="mt-1 pt-1 border-t border-[#444] flex justify-between"><span class="font-bold">總計</span><span class="font-bold ${color}">${formatNumber(d * q)}</span></div>`;
+        let h = `<div class="flex justify-between"><span class="text-slate-200 font-medium">價差</span><span class="font-bold ${color}">${d >= 0 ? '+' : ''}${formatNumber(d, 4)}</span></div><div class="flex justify-between mt-1"><span class="text-slate-200 font-medium">報酬</span><span class="font-bold ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}%</span></div>`;
+        if (q > 0) h += `<div class="mt-2 pt-2 border-t border-[#555] flex justify-between"><span class="font-bold text-slate-200">總計</span><span class="font-bold text-sm ${color}">${formatNumber(d * q)}</span></div>`;
         els.singleResult.innerHTML = h;
       } else els.singleResult.classList.add('hidden');
     }
-    ['singleCostInput', 'singleSellInput', 'singleQtyInput'].forEach(id => els[id].addEventListener('input', calculateSingleTrade));
+
+    ['singleCostInput', 'singleSellInput', 'singleQtyInput'].forEach(id => {
+      if(els[id]) els[id].addEventListener('input', calculateSingleTrade);
+    });
 
     function updateCurrentPriceColor() {
+      if(!els.currentPriceDisp) return;
       const v = parseFloat(els.currentPriceDisp.value);
       if (isNaN(v)) { 
-        els.currentPnlAmountDisp.textContent = '-'; 
-        els.currentPnlPercentDisp.textContent = '-'; 
+        if(els.currentPnlAmountDisp) els.currentPnlAmountDisp.textContent = '-'; 
+        if(els.currentPnlPercentDisp) els.currentPnlPercentDisp.textContent = '-'; 
         renderTable(); 
         return; 
       }
@@ -1083,37 +1123,45 @@
       els.currentPriceDisp.style.color = c;
       if (totalShares > 0) {
         const p = (v * totalShares) - totalCost, color = p >= 0 ? '#00e676' : '#ff5252';
-        els.currentPnlAmountDisp.style.color = color; els.currentPnlAmountDisp.textContent = (p > 0 ? '+' : '') + formatNumber(p);
-        els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = (p > 0 ? '+' : '') + formatNumber((p/totalCost)*100) + '%';
+        if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = color; els.currentPnlAmountDisp.textContent = (p > 0 ? '+' : '') + formatNumber(p); }
+        if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = (p > 0 ? '+' : '') + formatNumber((p/totalCost)*100) + '%'; }
       }
       renderTable(); 
     }
-    els.currentPriceDisp.addEventListener('input', updateCurrentPriceColor);
 
-    els.addForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const p = parseFloat(els.priceInput.value), q = parseFloat(els.qtyInput.value), s = els.tickerInput.value.toUpperCase().trim() || '-';
-      if (isNaN(p) || p <= 0 || isNaN(q) || q <= 0) return;
-      records.push({ id: Date.now().toString(), ticker: s, price: p, quantity: q, cost: p * q });
-      tradeHistory.unshift({ id: Date.now().toString()+'h', time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), ticker: s, price: p, quantity: q });
-      if (tradeHistory.length > 100) tradeHistory.pop();
-      els.priceInput.value = ''; els.qtyInput.value = ''; calculateCore(); renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
-      showToast('紀錄已新增', 'success');
-    });
+    if(els.currentPriceDisp) els.currentPriceDisp.addEventListener('input', updateCurrentPriceColor);
+
+    if(els.addForm) {
+      els.addForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const p = parseFloat(els.priceInput.value), q = parseFloat(els.qtyInput.value), s = els.tickerInput.value.toUpperCase().trim() || '-';
+        if (isNaN(p) || p <= 0 || isNaN(q) || q <= 0) return;
+        records.push({ id: Date.now().toString(), ticker: s, price: p, quantity: q, cost: p * q });
+        tradeHistory.unshift({ id: Date.now().toString()+'h', time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), ticker: s, price: p, quantity: q });
+        if (tradeHistory.length > 100) tradeHistory.pop();
+        els.priceInput.value = ''; els.qtyInput.value = ''; calculateCore(); renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
+        showToast('紀錄已新增', 'success');
+      });
+    }
 
     window.deleteRecord = (id) => { records = records.filter(r => r.id !== id); calculateCore(); };
     window.deleteHistoryRecord = (id) => { tradeHistory = tradeHistory.filter(r => r.id !== id); renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory)); };
     
-    els.clearBtn.addEventListener('click', () => { 
-      showModal({ type: 'confirm', text: '確定要清空當前所有倉位紀錄嗎？', onConfirm: () => { records = []; calculateCore(); showToast('紀錄已清空'); } });
-    });
+    if(els.clearBtn) {
+      els.clearBtn.addEventListener('click', () => { 
+        showModal({ type: 'confirm', text: '確定要清空當前所有倉位紀錄嗎？', onConfirm: () => { records = []; calculateCore(); showToast('紀錄已清空'); } });
+      });
+    }
     
-    els.clearHistoryBtn.addEventListener('click', () => { 
-      showModal({ type: 'confirm', text: '確定要清空所有歷史建倉紀錄嗎？', onConfirm: () => { tradeHistory = []; renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory)); showToast('歷史紀錄已清空'); } });
-    });
+    if(els.clearHistoryBtn) {
+      els.clearHistoryBtn.addEventListener('click', () => { 
+        showModal({ type: 'confirm', text: '確定要清空所有歷史建倉紀錄嗎？', onConfirm: () => { tradeHistory = []; renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory)); showToast('歷史紀錄已清空'); } });
+      });
+    }
 
     function renderTable() {
-      const currentPrice = parseFloat(els.currentPriceDisp.value);
+      if(!els.recordsTableBody) return;
+      const currentPrice = els.currentPriceDisp ? parseFloat(els.currentPriceDisp.value) : NaN;
       
       els.recordsTableBody.innerHTML = records.map(r => {
         let pnlHtml = '<td class="px-6 py-3 text-slate-500">-</td>';
@@ -1139,23 +1187,25 @@
     }
 
     function renderHistoryTable() {
-      els.historyCount.textContent = tradeHistory.length;
-      els.historyTableBody.innerHTML = tradeHistory.map(r => `
-        <tr class="hover:bg-white/[0.03] transition-colors">
-          <td class="px-6 py-3 text-slate-600 font-mono">${r.time}</td>
-          <td class="px-6 py-3 font-bold text-[#2979ff] cursor-pointer" onclick="selectTicker('${r.ticker}')">${r.ticker}</td>
-          <td class="px-6 py-3">${formatNumber(r.quantity)}</td>
-          <td class="px-6 py-3 text-slate-300">$${formatNumber(r.price, 4)}</td>
-          <td class="px-6 py-3 text-right"><button onclick="deleteHistoryRecord('${r.id}')" class="text-slate-600 hover:text-rose-500">${svgIconTrash}</button></td>
-        </tr>`).join('');
+      if(els.historyCount) els.historyCount.textContent = tradeHistory.length;
+      if(els.historyTableBody) {
+        els.historyTableBody.innerHTML = tradeHistory.map(r => `
+          <tr class="hover:bg-white/[0.03] transition-colors">
+            <td class="px-6 py-3 text-slate-600 font-mono">${r.time}</td>
+            <td class="px-6 py-3 font-bold text-[#2979ff] cursor-pointer" onclick="selectTicker('${r.ticker}')">${r.ticker}</td>
+            <td class="px-6 py-3">${formatNumber(r.quantity)}</td>
+            <td class="px-6 py-3 text-slate-300">$${formatNumber(r.price, 4)}</td>
+            <td class="px-6 py-3 text-right"><button onclick="deleteHistoryRecord('${r.id}')" class="text-slate-600 hover:text-rose-500">${svgIconTrash}</button></td>
+          </tr>`).join('');
+      }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       loadAndMigrateData();
       updateSoundUI(); 
-      if(els.tickerInput.value) { 
+      if(els.tickerInput && els.tickerInput.value) { 
         fetchStockData(); 
-        if(els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); 
+        if(els.autoRefreshCheckbox && els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); 
       }
     });
   </script>
