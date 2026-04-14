@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>股票倉位量化終端 Pro</title>
+  <title>股票倉位與即時圖表計算器</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入 TradingView 官方免 API Key 圖表庫 -->
@@ -198,7 +198,7 @@
           📊
         </div>
         <div>
-          <h1 class="text-xl md:text-2xl font-bold text-white tracking-tight">量化預測終端 <span class="text-xs font-normal text-[#2979ff] bg-[#2979ff]/10 px-2 py-0.5 rounded border border-[#2979ff]/30 ml-2">PRO</span></h1>
+          <h1 class="text-xl md:text-2xl font-bold text-white tracking-tight">股票倉位與即時圖表計算器 <span class="text-xs font-normal text-[#2979ff] bg-[#2979ff]/10 px-2 py-0.5 rounded border border-[#2979ff]/30 ml-2">PRO</span></h1>
           <p class="text-slate-500 text-xs md:text-sm mt-0.5">即時 API 數據採集、專業級 TradingView 繪圖、建倉成本精算</p>
         </div>
       </div>
@@ -465,13 +465,13 @@
               </div>
             </div>
             <div class="grid grid-cols-7 gap-1.5 text-center mb-1.5">
-              <div class="text-[11px] text-slate-400 font-bold py-1 bg-[#2a2a2a] rounded shadow-sm">日</div>
-              <div class="text-[11px] text-slate-400 font-bold py-1 bg-[#2a2a2a] rounded shadow-sm">一</div>
-              <div class="text-[11px] text-slate-400 font-bold py-1 bg-[#2a2a2a] rounded shadow-sm">二</div>
-              <div class="text-[11px] text-slate-400 font-bold py-1 bg-[#2a2a2a] rounded shadow-sm">三</div>
-              <div class="text-[11px] text-slate-400 font-bold py-1 bg-[#2a2a2a] rounded shadow-sm">四</div>
-              <div class="text-[11px] text-slate-400 font-bold py-1 bg-[#2a2a2a] rounded shadow-sm">五</div>
-              <div class="text-[11px] text-slate-400 font-bold py-1 bg-[#2a2a2a] rounded shadow-sm">六</div>
+              <div class="text-[11px] text-slate-400 font-bold py-1">日</div>
+              <div class="text-[11px] text-slate-400 font-bold py-1">一</div>
+              <div class="text-[11px] text-slate-400 font-bold py-1">二</div>
+              <div class="text-[11px] text-slate-400 font-bold py-1">三</div>
+              <div class="text-[11px] text-slate-400 font-bold py-1">四</div>
+              <div class="text-[11px] text-slate-400 font-bold py-1">五</div>
+              <div class="text-[11px] text-slate-400 font-bold py-1">六</div>
             </div>
             <div id="reportCalendarGrid" class="grid grid-cols-7 gap-1.5"></div>
             <div class="mt-5 flex justify-between items-end border-t border-[#333] pt-4">
@@ -898,22 +898,30 @@
 
     // --- 資料加載與自動遷移邏輯 ---
     function loadAndMigrateData() {
-      let saved = JSON.parse(localStorage.getItem(STORAGE_KEY_STATE));
-      if (!saved || (!saved.records || saved.records.length === 0)) {
-        const oldSaved = JSON.parse(localStorage.getItem('stockCalcStateHTML_PRO_V2'));
-        if (oldSaved && oldSaved.records && oldSaved.records.length > 0) {
-          saved = oldSaved;
-          localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(saved));
+      let savedStr = localStorage.getItem(STORAGE_KEY_STATE);
+      
+      // 修復幽靈紀錄 BUG：只有在完全沒有 V3 存檔時，才進行 V2 遷移
+      // 避免當使用者清空倉位 (records 變成 0 筆) 時，又錯誤載入舊版備份復活
+      if (!savedStr) {
+        const oldSavedStr = localStorage.getItem('stockCalcStateHTML_PRO_V2');
+        if (oldSavedStr) {
+          savedStr = oldSavedStr;
+          localStorage.setItem(STORAGE_KEY_STATE, savedStr);
         }
       }
-      if (saved) {
-        records = saved.records || [];
-        if(els.tickerInput) els.tickerInput.value = saved.ticker || '';
-        if(els.currentPriceDisp) els.currentPriceDisp.value = saved.currentPrice || '';
-        if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = saved.autoRefresh || false;
-        if(els.refreshIntervalInput) els.refreshIntervalInput.value = saved.refreshInterval || 2;
-        if(saved.dataSource && els.dataSourceSelect) els.dataSourceSelect.value = saved.dataSource;
+
+      if (savedStr) {
+        try {
+          const saved = JSON.parse(savedStr);
+          records = saved.records || [];
+          if(els.tickerInput) els.tickerInput.value = saved.ticker || '';
+          if(els.currentPriceDisp) els.currentPriceDisp.value = saved.currentPrice || '';
+          if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = saved.autoRefresh || false;
+          if(els.refreshIntervalInput) els.refreshIntervalInput.value = saved.refreshInterval || 2;
+          if(saved.dataSource && els.dataSourceSelect) els.dataSourceSelect.value = saved.dataSource;
+        } catch(e) {}
       }
+      
       tradeHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY)) || [];
       if(els.chartIntervalSelect) els.chartIntervalSelect.value = currentChartInterval;
       
@@ -1533,6 +1541,13 @@
 
     function renderTable() {
       if(!els.recordsTableBody) return;
+      
+      // 加入清空後的無紀錄提示
+      if (records.length === 0) {
+        els.recordsTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">尚無任何當前倉位</td></tr>';
+        return;
+      }
+
       const currentPrice = els.currentPriceDisp ? parseFloat(els.currentPriceDisp.value) : NaN;
       
       els.recordsTableBody.innerHTML = records.map(r => {
@@ -1561,6 +1576,12 @@
     function renderHistoryTable() {
       if(els.historyCount) els.historyCount.textContent = tradeHistory.length;
       if(els.historyTableBody) {
+        // 加入清空後的無紀錄提示
+        if (tradeHistory.length === 0) {
+          els.historyTableBody.innerHTML = '<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">尚無歷史交易紀錄</td></tr>';
+          return;
+        }
+
         let currentMonthStr = '';
         let htmlStr = '';
 
