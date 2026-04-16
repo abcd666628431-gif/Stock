@@ -443,6 +443,7 @@
               <button id="tabBtnCurrent" onclick="switchRecordsTab('current')" class="text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap">當前倉位</button>
               <button id="tabBtnHistory" onclick="switchRecordsTab('history')" class="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">歷史紀錄 (<span id="historyCount">0</span>)</button>
               <button id="tabBtnReport" onclick="switchRecordsTab('report')" class="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">收益日曆</button>
+              <button id="tabBtnDetails" onclick="switchRecordsTab('details')" class="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">盈虧明細</button>
             </div>
             <div class="flex space-x-3 shrink-0">
               <button id="clearBtn" class="hidden text-[10px] font-bold text-slate-500 hover:text-rose-500 transition-colors">RE-CALCULATE</button>
@@ -452,7 +453,7 @@
             </div>
           </div>
           
-          <div id="currentRecordsView" class="overflow-x-auto block">
+          <div id="currentRecordsView" class="overflow-x-auto block min-h-[400px]">
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="text-slate-500 border-b border-[#333]">
@@ -468,7 +469,7 @@
             </table>
           </div>
 
-          <div id="historyRecordsView" class="hidden max-h-[300px] overflow-auto custom-scrollbar">
+          <div id="historyRecordsView" class="hidden max-h-[650px] min-h-[400px] overflow-auto custom-scrollbar">
             <table class="w-full text-left text-xs min-w-[650px]">
               <thead class="sticky top-0 bg-[#1e1e1e] z-10 shadow-sm">
                 <tr class="text-slate-500 border-b border-[#333]">
@@ -487,7 +488,7 @@
           </div>
 
           <!-- 新增：收益報表視圖 -->
-          <div id="reportView" class="hidden p-4 max-h-[400px] overflow-y-auto custom-scrollbar bg-[#1e1e1e]">
+          <div id="reportView" class="hidden p-4 max-h-[650px] min-h-[400px] overflow-y-auto custom-scrollbar bg-[#1e1e1e]">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-sm font-bold text-white flex items-center">收益日曆 <span class="text-[10px] ml-2 text-slate-400 font-normal bg-slate-800 px-1.5 py-0.5 rounded border border-slate-600">依已平倉結算</span></h3>
               <div class="flex items-center space-x-2">
@@ -520,6 +521,35 @@
             </div>
           </div>
 
+          <!-- 新增：盈虧明細視圖 -->
+          <div id="detailsView" class="hidden p-4 max-h-[650px] min-h-[400px] overflow-y-auto custom-scrollbar bg-[#1e1e1e]">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center mb-1">盈虧明細 (<span id="detailsCurrencyLabel">USD</span>)</h3>
+                <div class="flex items-center bg-[#2a2a2a] p-1 rounded-full w-fit border border-[#333] shadow-sm">
+                  <button id="btnFilterProfit" onclick="setDetailsFilter('profit')" class="px-5 py-1.5 rounded-full text-xs font-bold bg-white text-black transition-all">盈利</button>
+                  <button id="btnFilterLoss" onclick="setDetailsFilter('loss')" class="px-5 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white transition-all">虧損</button>
+                </div>
+              </div>
+              <div class="flex flex-col items-end space-y-2">
+                <span class="text-[10px] text-slate-500">更新至 : <span id="detailsUpdateTime">--</span></span>
+                <select id="detailsCurrencySelect" class="bg-[#2a2a2a] text-[#2979ff] border border-[#444] rounded px-2 py-1 text-xs outline-none focus:border-[#2979ff] shadow-sm cursor-pointer font-bold">
+                  <option value="USD">USD</option>
+                  <option value="MOP">MOP</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center text-[11px] font-bold text-slate-500 border-b border-[#333] pb-2 mb-2 px-2">
+              <span>名稱</span>
+              <span class="flex items-center">盈虧金額 <span class="ml-1 text-[8px]">▼</span></span>
+            </div>
+            
+            <div id="detailsListContainer" class="space-y-1">
+              <!-- 列表內容由 JS 動態生成 -->
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -549,6 +579,8 @@
     let highlightTimeout = null;
     
     let activeRecordsTab = 'current';
+    let activeDetailsFilter = 'profit'; // 追蹤盈虧明細的篩選器狀態
+    
     let averagePrice = 0, totalShares = 0, totalCost = 0;
     let activeTargetMode = 'price'; 
     let quoteInterval = null, currentChartSymbol = ''; 
@@ -627,9 +659,11 @@
       tabBtnCurrent: document.getElementById('tabBtnCurrent'),
       tabBtnHistory: document.getElementById('tabBtnHistory'),
       tabBtnReport: document.getElementById('tabBtnReport'),
+      tabBtnDetails: document.getElementById('tabBtnDetails'),
       currentRecordsView: document.getElementById('currentRecordsView'),
       historyRecordsView: document.getElementById('historyRecordsView'),
       reportView: document.getElementById('reportView'),
+      detailsView: document.getElementById('detailsView'),
       historyActions: document.getElementById('historyActions'),
       historyTableBody: document.getElementById('historyTableBody'),
       historyCount: document.getElementById('historyCount'),
@@ -641,7 +675,15 @@
       reportYearCurrencyLabel: document.getElementById('reportYearCurrencyLabel'),
       reportCalendarGrid: document.getElementById('reportCalendarGrid'),
       reportMonthTotal: document.getElementById('reportMonthTotal'),
-      reportYearTotal: document.getElementById('reportYearTotal')
+      reportYearTotal: document.getElementById('reportYearTotal'),
+
+      // Details
+      detailsCurrencySelect: document.getElementById('detailsCurrencySelect'),
+      detailsCurrencyLabel: document.getElementById('detailsCurrencyLabel'),
+      detailsUpdateTime: document.getElementById('detailsUpdateTime'),
+      detailsListContainer: document.getElementById('detailsListContainer'),
+      btnFilterProfit: document.getElementById('btnFilterProfit'),
+      btnFilterLoss: document.getElementById('btnFilterLoss')
     };
 
     // --- UI 工具 (浮動通知與自訂對話框) ---
@@ -775,6 +817,7 @@
       localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
       renderHistoryTable();
       if(activeRecordsTab === 'report') renderReport();
+      if(activeRecordsTab === 'details') renderDetails();
       
       closeManualHistoryModal();
       document.getElementById('manualHistoryForm').reset();
@@ -894,6 +937,7 @@
       localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
       renderHistoryTable();
       if(activeRecordsTab === 'report') renderReport();
+      if(activeRecordsTab === 'details') renderDetails();
       
       closeEditHistoryModal();
       showToast('✅ 紀錄已更新', 'success');
@@ -1238,15 +1282,18 @@
       if(els.tabBtnCurrent) els.tabBtnCurrent.className = tab === 'current' ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap';
       if(els.tabBtnHistory) els.tabBtnHistory.className = tab === 'history' ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap';
       if(els.tabBtnReport) els.tabBtnReport.className = tab === 'report' ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap';
+      if(els.tabBtnDetails) els.tabBtnDetails.className = tab === 'details' ? 'text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap' : 'text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap';
       
       if(els.currentRecordsView) els.currentRecordsView.classList.toggle('hidden', tab !== 'current');
       if(els.historyRecordsView) els.historyRecordsView.classList.toggle('hidden', tab !== 'history');
       if(els.reportView) els.reportView.classList.toggle('hidden', tab !== 'report');
+      if(els.detailsView) els.detailsView.classList.toggle('hidden', tab !== 'details');
       
       if(els.clearBtn) els.clearBtn.classList.toggle('hidden', tab !== 'current' || records.length === 0);
       if(els.historyActions) els.historyActions.classList.toggle('hidden', tab !== 'history');
 
       if(tab === 'report') renderReport();
+      if(tab === 'details') renderDetails();
     };
 
     function renderReport() {
@@ -1358,6 +1405,99 @@
 
     if(els.reportCurrencySelect) {
       els.reportCurrencySelect.addEventListener('change', renderReport);
+    }
+
+    // --- 盈虧明細 (排行榜) 邏輯 ---
+    window.setDetailsFilter = function(filter) {
+      activeDetailsFilter = filter;
+      if(els.btnFilterProfit) els.btnFilterProfit.className = filter === 'profit' ? 'px-5 py-1.5 rounded-full text-xs font-bold bg-white text-black transition-all shadow-sm' : 'px-5 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white transition-all';
+      if(els.btnFilterLoss) els.btnFilterLoss.className = filter === 'loss' ? 'px-5 py-1.5 rounded-full text-xs font-bold bg-white text-black transition-all shadow-sm' : 'px-5 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white transition-all';
+      renderDetails();
+    };
+
+    function renderDetails() {
+      if (!els.detailsView || els.detailsView.classList.contains('hidden')) return;
+
+      const currency = els.detailsCurrencySelect ? els.detailsCurrencySelect.value : 'USD';
+      const multiplier = currency === 'MOP' ? 8 : 1; 
+      if (els.detailsCurrencyLabel) els.detailsCurrencyLabel.textContent = currency;
+      
+      const now = new Date();
+      if (els.detailsUpdateTime) els.detailsUpdateTime.textContent = now.toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}) + ' ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+      // 按代號統整所有平倉損益
+      const aggregated = {};
+      tradeHistory.forEach(r => {
+        const sPrice = parseFloat(r.sellPrice);
+        if (isNaN(sPrice)) return;
+
+        const fee = parseFloat(r.fee) || 0;
+        const isShort = r.direction === 'short';
+        const pnl = isShort ? (r.price - sPrice) * r.quantity - fee : (sPrice - r.price) * r.quantity - fee;
+
+        if (!aggregated[r.ticker]) aggregated[r.ticker] = 0;
+        aggregated[r.ticker] += pnl;
+      });
+
+      // 分為盈利與虧損兩組
+      const profitList = [];
+      const lossList = [];
+      for (const ticker in aggregated) {
+        if (aggregated[ticker] > 0) profitList.push({ ticker, pnl: aggregated[ticker] });
+        else if (aggregated[ticker] < 0) lossList.push({ ticker, pnl: aggregated[ticker] });
+      }
+
+      // 盈利由高到低，虧損由低到高(最慘的在上面)
+      profitList.sort((a, b) => b.pnl - a.pnl);
+      lossList.sort((a, b) => a.pnl - b.pnl);
+
+      const currentList = activeDetailsFilter === 'profit' ? profitList : lossList;
+
+      if (currentList.length === 0) {
+        els.detailsListContainer.innerHTML = `<div class="text-center text-slate-500 py-8">尚無${activeDetailsFilter === 'profit' ? '盈利' : '虧損'}紀錄</div>`;
+        return;
+      }
+
+      let html = '';
+      currentList.forEach((item, index) => {
+        const displayPnl = item.pnl * multiplier;
+        const colorClass = item.pnl > 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+        const sign = item.pnl > 0 ? '+' : '';
+        
+        // 判斷市場標籤 (簡單邏輯：包含 . 的如 .TW 顯示出來，沒有的預設 US)
+        let marketTag = 'US';
+        if (item.ticker.includes('.')) {
+          marketTag = item.ticker.split('.')[1].toUpperCase();
+        } else if (item.ticker.length === 4 && !isNaN(item.ticker)) {
+          marketTag = 'HK'; // 簡易判斷港股
+        }
+
+        // 排行榜標章顏色設計 (確保全部都有排名)
+        let badgeHtml = '';
+        if (index === 0) badgeHtml = `<span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded bg-[#e05b38] text-white text-[11px] font-bold mr-3 shadow-md">${index + 1}</span>`;
+        else if (index === 1) badgeHtml = `<span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded bg-[#e89050] text-white text-[11px] font-bold mr-3 shadow-md">${index + 1}</span>`;
+        else if (index === 2) badgeHtml = `<span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded bg-[#eabd5d] text-white text-[11px] font-bold mr-3 shadow-md">${index + 1}</span>`;
+        else badgeHtml = `<span class="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded bg-[#4a4a4a] border border-[#555] text-slate-200 text-[11px] font-bold mr-3 shadow-sm">${index + 1}</span>`;
+
+        html += `
+          <div class="flex justify-between items-center py-3 border-b border-[#333]/50 hover:bg-[#2a2a2a] px-2 rounded-lg transition-colors group">
+            <div class="flex items-center">
+              ${badgeHtml}
+              <div class="flex flex-col">
+                <span class="text-[13px] font-bold text-slate-200 group-hover:text-white transition-colors cursor-pointer" onclick="selectTicker('${item.ticker}')">${item.ticker}</span>
+                <span class="text-[9px] font-bold ${marketTag === 'US' ? 'text-[#2979ff]' : marketTag === 'HK' ? 'text-[#d946ef]' : 'text-slate-500'} bg-black/30 w-fit px-1 rounded mt-0.5">${marketTag}</span>
+              </div>
+            </div>
+            <div class="text-sm font-bold tracking-wide ${colorClass}">${sign}${formatNumber(displayPnl)}</div>
+          </div>
+        `;
+      });
+
+      els.detailsListContainer.innerHTML = html;
+    }
+
+    if(els.detailsCurrencySelect) {
+      els.detailsCurrencySelect.addEventListener('change', renderDetails);
     }
 
     function switchTab(tabId) {
@@ -1679,6 +1819,7 @@
         
         if (tradeHistory.length > 200) tradeHistory.pop();
         els.priceInput.value = ''; els.qtyInput.value = ''; calculateCore(); renderHistoryTable(); localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
+        if(activeRecordsTab === 'details') renderDetails();
         showToast('紀錄已新增', 'success');
       });
     }
@@ -1690,6 +1831,7 @@
       renderHistoryTable(); 
       localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory)); 
       if(activeRecordsTab === 'report') renderReport();
+      if(activeRecordsTab === 'details') renderDetails();
     };
     
     // 更新歷史紀錄中的賣出價與手續費
@@ -1700,6 +1842,7 @@
         localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
         renderHistoryTable();
         if(activeRecordsTab === 'report') renderReport();
+        if(activeRecordsTab === 'details') renderDetails();
       }
     };
 
