@@ -135,11 +135,11 @@
             <input type="number" step="any" id="mhQty" required class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
           <div>
-            <label class="block text-[11px] font-bold text-[#2979ff] mb-1">建倉價</label>
+            <label class="block text-[11px] font-bold text-[#2979ff] mb-1">買入價</label>
             <input type="number" step="any" id="mhBuy" required class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
           <div>
-            <label class="block text-[11px] font-bold text-[#00e676] mb-1">平倉價</label>
+            <label class="block text-[11px] font-bold text-[#00e676] mb-1">賣出價</label>
             <input type="number" step="any" id="mhSell" placeholder="選填" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
           <div class="col-span-2">
@@ -187,11 +187,11 @@
             <input type="number" step="any" id="ehQty" required class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
           <div>
-            <label class="block text-[11px] font-bold text-[#2979ff] mb-1">建倉價</label>
+            <label class="block text-[11px] font-bold text-[#2979ff] mb-1">買入價</label>
             <input type="number" step="any" id="ehBuy" required class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
           <div>
-            <label class="block text-[11px] font-bold text-[#00e676] mb-1">平倉價</label>
+            <label class="block text-[11px] font-bold text-[#00e676] mb-1">賣出價</label>
             <input type="number" step="any" id="ehSell" placeholder="選填" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
           <div class="col-span-2">
@@ -475,8 +475,8 @@
                   <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">時間</th>
                   <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">代號</th>
                   <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">數量</th>
-                  <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">建倉價</th>
-                  <th class="px-2 py-3 font-bold uppercase tracking-wider whitespace-nowrap text-center">平倉價</th>
+                  <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">買入價</th>
+                  <th class="px-2 py-3 font-bold uppercase tracking-wider whitespace-nowrap text-center">賣出價</th>
                   <th class="px-2 py-3 font-bold uppercase tracking-wider whitespace-nowrap text-center">手續費</th>
                   <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">結算盈虧</th>
                   <th class="px-4 py-3 text-right whitespace-nowrap">ACTION</th>
@@ -1282,8 +1282,8 @@
 
         if (recordDate.getFullYear() === year) {
           const fee = parseFloat(r.fee) || 0;
-          const isShort = r.direction === 'short';
-          const pnl = isShort ? (r.price - sPrice) * r.quantity - fee : (sPrice - r.price) * r.quantity - fee;
+          // 恢復成原本統一的 (賣出 - 買入) 算法
+          const pnl = (sPrice - r.price) * r.quantity - fee;
           
           yearlyTotal += pnl;
 
@@ -1567,7 +1567,7 @@
         if (!isNaN(val)) {
           let p = 0;
           records.forEach(r => {
-             p += (r.direction === 'short') ? (r.price - val) * r.quantity : (val - r.price) * r.quantity;
+             p += (val - r.price) * r.quantity;
           });
           const pct = (p / totalCost) * 100;
           const color = p >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
@@ -1579,8 +1579,8 @@
           const upP = averagePrice * (1 + val/100), dwP = averagePrice * (1 - val/100);
           let upPn = 0, dwPn = 0;
           records.forEach(r => {
-             upPn += (r.direction === 'short') ? (r.price - upP) * r.quantity : (upP - r.price) * r.quantity;
-             dwPn += (r.direction === 'short') ? (r.price - dwP) * r.quantity : (dwP - r.price) * r.quantity;
+             upPn += (upP - r.price) * r.quantity;
+             dwPn += (dwP - r.price) * r.quantity;
           });
           html = `
             <div class="p-2.5 rounded-xl bg-[#00e676]/10 border border-[#00e676]/30 text-[11px]">
@@ -1595,9 +1595,9 @@
       } else if (activeTargetMode === 'pnl' && els.expectedPnlInput) {
         let val = Math.abs(parseFloat(els.expectedPnlInput.value));
         if (!isNaN(val)) {
-          const netQty = records.reduce((acc, r) => acc + (r.direction === 'short' ? -r.quantity : r.quantity), 0);
+          const netQty = records.reduce((acc, r) => acc + r.quantity, 0);
           if (netQty === 0) {
-             html = `<div class="p-2.5 rounded-xl bg-slate-800 text-center text-xs text-slate-400">多空已完全對沖，價位變動不影響總損益</div>`;
+             html = `<div class="p-2.5 rounded-xl bg-slate-800 text-center text-xs text-slate-400">數量已抵銷</div>`;
           } else {
              const valPerShare = val / Math.abs(netQty);
              const upP = averagePrice + valPerShare;
@@ -1645,7 +1645,7 @@
       if (totalShares > 0) {
         let totalPnl = 0;
         records.forEach(r => {
-           totalPnl += (r.direction === 'short') ? (r.price - v) * r.quantity : (v - r.price) * r.quantity;
+           totalPnl += (v - r.price) * r.quantity;
         });
         const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
         if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = color; els.currentPnlAmountDisp.textContent = (totalPnl > 0 ? '+' : '') + formatNumber(totalPnl); }
@@ -1727,8 +1727,8 @@
         const newBadge = index === 0 ? '<span class="ml-2 text-white bg-rose-600 px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider animate-pulse shadow-[0_0_8px_rgba(225,29,72,0.6)]">NEW</span>' : '';
         
         if (!isNaN(currentPrice)) {
-          const rowPnl = isShort ? (r.price - currentPrice) * r.quantity : (currentPrice - r.price) * r.quantity;
-          const rowPnlPct = isShort ? ((r.price - currentPrice) / r.price) * 100 : ((currentPrice - r.price) / r.price) * 100;
+          const rowPnl = (currentPrice - r.price) * r.quantity;
+          const rowPnlPct = ((currentPrice - r.price) / r.price) * 100;
           const color = rowPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
           const sign = rowPnl > 0 ? '+' : '';
           pnlHtml = `<td class="px-6 py-3 font-bold ${color}">${sign}${formatNumber(rowPnl)} <span class="text-[10px] opacity-70 ml-1">(${sign}${formatNumber(rowPnlPct)}%)</span></td>`;
@@ -1790,7 +1790,7 @@
           
           if (!isNaN(sPrice)) {
             const fee = parseFloat(r.fee) || 0;
-            const pnl = isShort ? (r.price - sPrice) * r.quantity - fee : (sPrice - r.price) * r.quantity - fee;
+            const pnl = (sPrice - r.price) * r.quantity - fee;
             const pnlPct = (pnl / (r.price * r.quantity)) * 100;
             const color = pnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
             const sign = pnl > 0 ? '+' : '';
@@ -1804,7 +1804,7 @@
             <td class="px-4 py-3 whitespace-nowrap">${formatNumber(r.quantity)}</td>
             <td class="px-4 py-3 text-slate-300 whitespace-nowrap">$${formatNumber(r.price, 4)}</td>
             <td class="px-2 py-2 text-center">
-              <input type="number" step="any" placeholder="-" value="${r.sellPrice !== undefined ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-16 px-1.5 py-1 text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入平倉價">
+              <input type="number" step="any" placeholder="-" value="${r.sellPrice !== undefined ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-16 px-1.5 py-1 text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入賣出價">
             </td>
             <td class="px-2 py-2 text-center">
               <input type="number" step="any" placeholder="-" value="${r.fee !== undefined ? r.fee : ''}" onchange="updateHistoryTrade('${r.id}', 'fee', this.value)" class="w-14 px-1.5 py-1 text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入手續費">
