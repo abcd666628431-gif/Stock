@@ -1019,6 +1019,10 @@
         try {
           const saved = JSON.parse(savedStr);
           records = saved.records || [];
+          
+          // 確保載入時，舊資料也會按照 ID (時間戳) 由新到舊排好，最新的在最上面
+          records.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+          
           if(els.tickerInput) els.tickerInput.value = saved.ticker || '';
           if(els.currentPriceDisp) els.currentPriceDisp.value = saved.currentPrice || '';
           if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = saved.autoRefresh || false;
@@ -1645,7 +1649,8 @@
         const now = new Date();
         const timeStr = now.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'}) + ' ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         
-        records.push({ id: Date.now().toString(), ticker: s, price: p, quantity: q, cost: p * q, direction: dir });
+        // 改為 unshift 將最新紀錄推到陣列最前面 (最上方)
+        records.unshift({ id: Date.now().toString(), ticker: s, price: p, quantity: q, cost: p * q, direction: dir });
         tradeHistory.unshift({ 
           id: Date.now().toString()+'h', 
           time: timeStr, 
@@ -1696,10 +1701,11 @@
 
       const currentPrice = els.currentPriceDisp ? parseFloat(els.currentPriceDisp.value) : NaN;
       
-      els.recordsTableBody.innerHTML = records.map(r => {
+      els.recordsTableBody.innerHTML = records.map((r, index) => {
         let pnlHtml = '<td class="px-6 py-3 text-slate-500">-</td>';
         const isShort = r.direction === 'short';
         const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[9px] ml-1">多</span>';
+        const newBadge = index === 0 ? '<span class="ml-2 text-white bg-rose-600 px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider animate-pulse shadow-[0_0_8px_rgba(225,29,72,0.6)]">NEW</span>' : '';
         
         if (!isNaN(currentPrice)) {
           const rowPnl = isShort ? (r.price - currentPrice) * r.quantity : (currentPrice - r.price) * r.quantity;
@@ -1711,7 +1717,11 @@
 
         return `
         <tr class="hover:bg-white/[0.03] transition-colors">
-          <td class="px-6 py-3 font-bold text-[#2979ff] cursor-pointer" onclick="selectTicker('${r.ticker}')">${r.ticker}${dirHtml}</td>
+          <td class="px-6 py-3 font-bold text-[#2979ff] cursor-pointer whitespace-nowrap" onclick="selectTicker('${r.ticker}')">
+            <div class="flex items-center">
+              ${r.ticker}${dirHtml}${newBadge}
+            </div>
+          </td>
           <td class="px-6 py-3">${formatNumber(r.quantity)}</td>
           <td class="px-6 py-3 text-slate-300">$${formatNumber(r.price, 4)}</td>
           <td class="px-6 py-3 text-slate-400">$${formatNumber(r.cost)}</td>
