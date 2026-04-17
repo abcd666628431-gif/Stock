@@ -239,12 +239,10 @@
         
         <!-- API 抓價 -->
         <div class="card-panel p-3 rounded-xl">
-          <div class="flex justify-between items-start mb-2">
-            <div class="flex flex-col">
-              <h2 class="text-sm font-bold uppercase tracking-wider text-white">市場報價</h2>
-              <span id="lastUpdateTime" class="text-[9px] text-slate-500 font-mono mt-0.5"></span>
-            </div>
-            <div class="flex items-center space-x-1.5">
+          <div class="flex justify-between items-center mb-2">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-white">市場報價</h2>
+            <div class="flex items-center space-x-2">
+              <span id="lastUpdateTime" class="text-[9px] text-slate-400 font-mono"></span>
               <select id="dataSourceSelect" class="bg-[#2a2a2a] text-[10px] text-white border border-[#444] rounded px-1 py-0.5 outline-none font-bold cursor-pointer focus:border-[#2979ff]">
                 <option value="finnhub">來源: Finnhub</option>
                 <option value="twelvedata">來源: TwelveData</option>
@@ -1567,11 +1565,19 @@
       });
     }
 
-    function updateLastFetchTime() {
+    function updateLastFetchTime(unixTimestamp) {
       if (!els.lastUpdateTime) return;
-      const now = new Date();
+      let dateObj;
+      if (unixTimestamp) {
+        // 如果有提供來源時間戳 (Finnhub 給的是秒，需乘 1000 轉為毫秒)
+        dateObj = new Date(unixTimestamp * 1000);
+      } else {
+        // 備用：若數據源未提供時間 (如 TwelveData 簡易版)，則使用當前時間
+        dateObj = new Date();
+      }
+      
       // 強制轉換並格式化為澳門時間 (Asia/Macau)
-      const timeStr = now.toLocaleTimeString('zh-TW', { timeZone: 'Asia/Macau', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const timeStr = dateObj.toLocaleTimeString('zh-TW', { timeZone: 'Asia/Macau', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
       els.lastUpdateTime.textContent = `澳門時間 ${timeStr}`;
     }
 
@@ -1596,7 +1602,8 @@
           if (data && data.c) { 
             if(els.currentPriceDisp) els.currentPriceDisp.value = data.c; 
             updateCurrentPriceColor(); checkPriceAlerts(symbol, data.c); saveData(); 
-            updateLastFetchTime();
+            // 傳入 Finnhub 提供的真實數據源時間戳 (data.t)
+            updateLastFetchTime(data.t);
           }
         } else {
           // Twelve Data API 邏輯
@@ -1609,6 +1616,7 @@
             const price = parseFloat(data.price);
             if(els.currentPriceDisp) els.currentPriceDisp.value = price;
             updateCurrentPriceColor(); checkPriceAlerts(symbol, price); saveData();
+            // TwelveData /price 端點僅提供價格，此處作為 Fallback
             updateLastFetchTime();
           } else {
              showToast('無法取得該代號之全市場報價', 'error');
@@ -1640,7 +1648,8 @@
             if (els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== data.c) {
               els.currentPriceDisp.value = data.c; updateCurrentPriceColor(); checkPriceAlerts(symbol, data.c);
             }
-            updateLastFetchTime();
+            // 傳入 Finnhub 提供的真實數據源時間戳 (data.t)
+            updateLastFetchTime(data.t);
           }
         } else {
            const res = await fetch(`https://api.twelvedata.com/price?symbol=${symbol}&apikey=${TWELVE_DATA_API_KEY}`);
@@ -1655,6 +1664,7 @@
               if (els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== price) {
                 els.currentPriceDisp.value = price; updateCurrentPriceColor(); checkPriceAlerts(symbol, price);
               }
+              // TwelveData /price 端點僅提供價格，此處作為 Fallback
               updateLastFetchTime();
            }
         }
