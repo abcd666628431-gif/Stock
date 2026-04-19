@@ -682,7 +682,13 @@
                
                updateSyncStatus('synced');
            } else {
-               updateSyncStatus('synced');
+               // 💡 核心修復：如果雲端是空的，但電腦本地有舊資料，立刻強制將舊資料「推」上雲端！
+               if (records.length > 0 || tradeHistory.length > 0 || savedTickers.length > 0) {
+                   console.log("偵測到本地舊資料，正在自動將舊資料備份至雲端...");
+                   if (typeof window.syncToCloud === 'function') window.syncToCloud(true);
+               } else {
+                   updateSyncStatus('synced');
+               }
            }
        }, (err) => {
            console.error("Firestore Listen Error:", err);
@@ -694,14 +700,13 @@
        });
     }
 
-    window.syncToCloud = function() {
+    window.syncToCloud = function(forcePush = false) {
        if (!currentUser) return;
        updateSyncStatus('syncing');
        
        if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
        
-       // 採用 0.8 秒防抖動：保護資料庫不被快速點擊塞爆，同時保持極高的即時感
-       syncDebounceTimer = setTimeout(async () => {
+       const executeUpload = async () => {
            try {
                lastLocalSyncTime = Date.now(); // 記錄本次手動更新的時間戳
                
@@ -723,7 +728,14 @@
                }
                updateSyncStatus('error');
            }
-       }, 800);
+       };
+
+       // 💡 如果是強制上傳 (初次備份舊資料)，則跳過 0.8 秒延遲，瞬間上傳
+       if (forcePush) {
+           executeUpload();
+       } else {
+           syncDebounceTimer = setTimeout(executeUpload, 800);
+       }
     };
 
     // --- 攔截 localStorage 自動觸發雲端同步 ---
