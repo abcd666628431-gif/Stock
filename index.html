@@ -570,7 +570,7 @@
     // --- Firebase 雲端同步與初始化 ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     let firebaseConfig;
     try {
@@ -590,20 +590,23 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    
+    let db;
+    try {
+        // 導入行程助手同款的強大本地快取與多分頁管理器，實現更無縫的 0 延遲同步
+        db = initializeFirestore(app, {
+            localCache: persistentLocalCache({
+                tabManager: persistentMultipleTabManager()
+            })
+        });
+    } catch (e) {
+        db = getFirestore(app);
+    }
+    
     const appIdStr = typeof __app_id !== 'undefined' ? __app_id : 'stock-calculator-pro';
 
-    // 產生或讀取同步碼
-    const STORAGE_KEY_SYNC_CODE = 'stockCalcSyncCode_PRO';
-    let currentSyncCode = localStorage.getItem(STORAGE_KEY_SYNC_CODE);
-    if (!currentSyncCode) {
-      currentSyncCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      localStorage.setItem(STORAGE_KEY_SYNC_CODE, currentSyncCode);
-    }
-
     let currentUser = null;
-    let isApplyingCloudData = false; // 替換舊的計時器鎖定，改用絕對同步鎖
-    let saveTimeout = null;
+    let isApplyingCloudData = false; // 絕對同步鎖
     let unsubscribeSnapshot = null;
 
     const syncStatusEl = document.getElementById('cloudSyncStatus');
@@ -644,15 +647,17 @@
     onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
-        setupFirebaseListener(currentSyncCode); // 改為使用 Sync Code 而非 UID
+        // 徹底捨棄手動同步碼，改為綁定平台底層唯一帳號 ID (UID)
+        setupFirebaseListener(user.uid); 
       }
     });
 
-    function setupFirebaseListener(syncCode) {
+    function setupFirebaseListener(uid) {
        updateSyncStatus('syncing');
        if (unsubscribeSnapshot) unsubscribeSnapshot();
 
-       const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'sync_state', syncCode);
+       // 採用最高安全規格的私有路徑 (users/uid)，保護倉位隱私不外洩
+       const docRef = doc(db, 'artifacts', appIdStr, 'users', uid, 'calculatorData', 'state');
        unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
            if (docSnap.exists()) {
                isApplyingCloudData = true; // 開啟嚴格同步鎖，阻擋攔截器
@@ -693,38 +698,28 @@
        });
     }
 
-    window.syncToCloud = function(forcePush = false) {
+    window.syncToCloud = async function() {
        if (!currentUser || isApplyingCloudData) return; // 正在套用雲端資料時，絕對不可反向覆寫
        
        updateSyncStatus('syncing');
-       if (saveTimeout) clearTimeout(saveTimeout);
        
-       const executeUpload = async () => {
-           try {
-               // 路徑改為符合系統嚴格規範的 public/data
-               const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'sync_state', currentSyncCode);
-               const stateToSave = {
-                   records,
-                   tradeHistory,
-                   savedTickers,
-                   priceAlerts
-                   // 💡 移除了 settings，讓各裝置保有完全獨立的 UI 狀態 (不搶看同一檔股票)
-               };
-               await setDoc(docRef, stateToSave, { merge: true });
-               updateSyncStatus('synced');
-           } catch (e) {
-               console.error("Sync error", e);
-               if (e.message && e.message.includes('Missing or insufficient permissions')) {
-                   showToast('雲端儲存失敗：權限不足，請檢查 Firebase 設定', 'error');
-               }
-               updateSyncStatus('error');
+       try {
+           const docRef = doc(db, 'artifacts', appIdStr, 'users', currentUser.uid, 'calculatorData', 'state');
+           const stateToSave = {
+               records,
+               tradeHistory,
+               savedTickers,
+               priceAlerts
+           };
+           // 移除 1.5 秒延遲，實現真正 0 延遲即時上傳
+           await setDoc(docRef, JSON.parse(JSON.stringify(stateToSave)), { merge: true });
+           updateSyncStatus('synced');
+       } catch (e) {
+           console.error("Sync error", e);
+           if (e.message && e.message.includes('Missing or insufficient permissions')) {
+               showToast('雲端儲存失敗：權限不足，請檢查 Firebase 設定', 'error');
            }
-       };
-
-       if (forcePush) {
-           executeUpload(); // 強制立即上傳
-       } else {
-           saveTimeout = setTimeout(executeUpload, 1500); // 一般操作時防抖打包
+           updateSyncStatus('error');
        }
     };
 
