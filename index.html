@@ -63,7 +63,7 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
   </style>
 </head>
-<body class="min-h-screen p-4 md:p-6">
+<body class="min-h-screen p-1.5 md:p-6">
 
   <!-- 浮動通知容器 (Toast) -->
   <div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
@@ -213,49 +213,49 @@
   </div>
 
   <!-- 解除寬度限制：採用 max-w-[1600px] 大版面設計 -->
-  <div class="max-w-[1600px] w-[96%] mx-auto space-y-4">
+  <div class="max-w-[1600px] w-[99%] md:w-[96%] mx-auto space-y-2 md:space-y-4">
     
     <!-- 標題區塊 -->
-    <header class="flex justify-between items-center pb-3 border-b border-[#333]">
-      <div class="flex items-center space-x-4">
-        <div class="bg-[#1e1e1e] border border-[#333] p-2 rounded-lg shadow-lg flex items-center justify-center w-12 h-12 text-2xl select-none">
+    <header class="flex justify-between items-center pb-2 md:pb-3 border-b border-[#333]">
+      <div class="flex items-center space-x-2 md:space-x-4">
+        <div class="bg-[#1e1e1e] border border-[#333] p-1.5 md:p-2 rounded-lg shadow-lg flex items-center justify-center w-8 h-8 md:w-12 md:h-12 text-base md:text-2xl select-none">
           📊
         </div>
         <div>
-          <h1 class="text-xl md:text-2xl font-bold text-white tracking-tight">股票倉位與即時圖表計算器 <span class="text-xs font-normal text-[#2979ff] bg-[#2979ff]/10 px-2 py-0.5 rounded border border-[#2979ff]/30 ml-2">PRO</span><span id="cloudSyncStatus" class="text-[10px] text-slate-500 ml-3">☁️ 未連線</span></h1>
+          <h1 class="text-sm md:text-2xl font-bold text-white tracking-tight flex items-center flex-wrap">
+            股票倉位與即時圖表計算器 
+            <span class="text-[9px] md:text-xs font-normal text-[#2979ff] bg-[#2979ff]/10 px-1 md:px-2 py-0.5 rounded border border-[#2979ff]/30 ml-2">PRO</span>
+            <span id="cloudSyncStatus" class="text-[9px] md:text-[10px] text-slate-500 ml-2">☁️ 未連線</span>
+          </h1>
         </div>
       </div>
-      <div class="flex items-center space-x-2">
-        <button id="exportBtn" class="text-xs flex items-center bg-[#2a2a2a] hover:bg-[#333] text-slate-300 px-3 py-2 rounded-lg transition-colors border border-[#444] shadow-sm hidden md:flex" title="將所有紀錄與設定打包導出 (JSON)">
+      <div class="flex items-center space-x-2 shrink-0">
+        <button id="exportBtn" class="text-[10px] md:text-xs flex items-center bg-[#2a2a2a] hover:bg-[#333] text-slate-300 px-2 md:px-3 py-1.5 md:py-2 rounded-lg transition-colors border border-[#444] shadow-sm hidden md:flex" title="將所有紀錄與設定打包導出 (JSON)">
           📤 導出
         </button>
-        <label class="text-xs flex items-center bg-[#2a2a2a] hover:bg-[#333] text-slate-300 px-3 py-2 rounded-lg transition-colors border border-[#444] shadow-sm cursor-pointer mb-0 hidden md:flex" title="導入備份還原資料 (JSON)">
+        <label class="text-[10px] md:text-xs flex items-center bg-[#2a2a2a] hover:bg-[#333] text-slate-300 px-2 md:px-3 py-1.5 md:py-2 rounded-lg transition-colors border border-[#444] shadow-sm cursor-pointer mb-0 hidden md:flex" title="導入備份還原資料 (JSON)">
           📥 導入
           <input type="file" id="importFileInput" accept=".json" class="hidden">
         </label>
-        <button id="apiKeyBtn" class="text-xs flex items-center bg-[#2a2a2a] hover:bg-[#333] text-slate-300 px-4 py-2 rounded-lg transition-colors border border-[#444] shadow-sm">
-          🔑 API Key 設置
+        <button id="apiKeyBtn" class="text-[10px] md:text-xs flex items-center bg-[#2a2a2a] hover:bg-[#333] text-slate-300 px-2 md:px-4 py-1.5 md:py-2 rounded-lg transition-colors border border-[#444] shadow-sm">
+          🔑 <span class="hidden md:inline ml-1">API Key 設置</span>
         </button>
       </div>
     </header>
 
     <!-- 改用 Flex 佈局：左側固定寬度，右側自適應填滿 -->
-    <div class="flex flex-col lg:flex-row gap-5">
+    <div class="flex flex-col lg:flex-row gap-2 md:gap-5">
       
       <!-- 左側：控制面板 -->
-      <div class="w-full lg:w-[340px] xl:w-[380px] shrink-0 space-y-3">
+      <div class="w-full lg:w-[340px] xl:w-[380px] shrink-0 space-y-2 md:space-y-3">
         
         <!-- API 抓價 -->
-        <div class="card-panel p-3 rounded-xl">
-          <div class="flex justify-between items-center mb-2">
-            <h2 class="text-sm font-bold uppercase tracking-wider text-white">市場報價</h2>
-            <div class="flex items-center space-x-2">
-              <span id="lastUpdateTime" class="text-[9px] text-slate-400 font-mono"></span>
-              <select id="dataSourceSelect" class="bg-[#2a2a2a] text-[10px] text-white border border-[#444] rounded px-1 py-0.5 outline-none font-bold cursor-pointer focus:border-[#2979ff]">
-                <option value="finnhub">來源: Finnhub</option>
-                <option value="twelvedata">來源: TwelveData</option>
-              </select>
-              <label class="flex items-center text-[11px] text-slate-200 font-medium cursor-pointer hover:text-white transition-colors">
+        <div class="card-panel p-2 md:p-3 rounded-xl">
+          <div class="flex justify-between items-center mb-1.5 md:mb-2">
+            <h2 class="text-[11px] md:text-sm font-bold uppercase tracking-wider text-white">市場報價</h2>
+            <div class="flex items-center space-x-1.5 md:space-x-2">
+              <span id="lastUpdateTime" class="text-[8px] md:text-[9px] text-slate-400 font-mono"></span>
+              <select id="dataSourceSelect" class="bg-[#2a2a2a] text-[9px] md:text-[10px] text-white border border-[#444] rounded px-1 py-0.5 outline-none font-bold cursor-pointer focus:border-[#2979ff]">
                 <input type="checkbox" id="autoRefreshCheckbox" class="mr-1 rounded border-[#444] bg-[#2a2a2a] text-[#2979ff] focus:ring-0">
                 <input type="number" id="refreshIntervalInput" value="2" min="1" class="w-7 text-center bg-transparent border-none p-0 text-[#2979ff] font-bold"> 秒
               </label>
@@ -268,20 +268,20 @@
                 id="tickerInput"
                 type="text"
                 autocomplete="off"
-                class="w-full pl-3 pr-2 py-2 text-sm font-bold rounded-lg transition-all uppercase-input"
+                class="w-full pl-2 md:pl-3 pr-2 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg transition-all uppercase-input"
                 placeholder="代號 (如: AAPL)"
               >
               <div id="tickerDropdown" class="hidden absolute top-full left-0 w-full mt-1 bg-[#1e1e1e] border border-[#444] rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar"></div>
             </div>
-            <button id="fetchBtn" class="btn-primary text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg disabled:opacity-50">
+            <button id="fetchBtn" class="btn-primary text-white text-xs md:text-sm font-bold px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-lg disabled:opacity-50 shrink-0">
               抓取
             </button>
           </div>
         </div>
 
         <!-- 新增買入 -->
-        <div class="card-panel p-3 rounded-xl">
-          <h2 class="text-sm font-bold uppercase tracking-wider text-white mb-3 flex items-center">
+        <div class="card-panel p-2 md:p-3 rounded-xl">
+          <h2 class="text-[11px] md:text-sm font-bold uppercase tracking-wider text-white mb-2 md:mb-3 flex items-center">
             <svg class="mr-2 text-[#2979ff]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
             新增建倉紀錄
           </h2>
@@ -298,22 +298,22 @@
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-[11px] font-bold text-slate-200 mb-1">數量 (股)</label>
-                <input id="qtyInput" type="number" step="any" class="w-full px-3 py-2 text-sm font-bold rounded-lg border border-[#444]" required>
+                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">數量 (股)</label>
+                <input id="qtyInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required>
               </div>
               <div>
-                <label class="block text-[11px] font-bold text-slate-200 mb-1">價位</label>
-                <input id="priceInput" type="number" step="any" class="w-full px-3 py-2 text-sm font-bold rounded-lg border border-[#444]" required>
+                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">價位</label>
+                <input id="priceInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required>
               </div>
             </div>
-            <button type="submit" class="w-full bg-[#2979ff] hover:bg-[#1c54b2] text-white text-sm font-bold py-2 rounded-lg transition-colors shadow-lg">
+            <button type="submit" class="w-full bg-[#2979ff] hover:bg-[#1c54b2] text-white text-xs md:text-sm font-bold py-1.5 md:py-2 rounded-lg transition-colors shadow-lg">
               加入計算模型
             </button>
           </form>
         </div>
 
         <!-- 試算工具 (包含價位提醒) -->
-        <div class="card-panel p-2 rounded-xl flex flex-col">
+        <div class="card-panel p-1.5 md:p-2 rounded-xl flex flex-col">
           <div class="flex space-x-1 bg-[#0F0F0F] p-1 rounded-lg mb-2 overflow-x-auto no-scrollbar">
             <button id="btn-tab-target" onclick="switchTab('target')" class="flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md bg-[#2979ff] text-white font-bold transition-all">預期試算</button>
             <button id="btn-tab-single" onclick="switchTab('single')" class="flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md text-slate-300 hover:text-white font-medium transition-all">單筆計算</button>
@@ -398,41 +398,41 @@
       </div>
 
       <!-- 右側：看板、圖表與列表 (flex-1 讓它自由填滿剩餘的巨大空間) -->
-      <div class="flex-1 min-w-0 space-y-4">
+      <div class="flex-1 min-w-0 space-y-2 md:space-y-4">
         
-        <!-- 核心看板 -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
-          <div class="card-panel px-3 py-1.5 rounded-lg flex flex-col justify-center relative overflow-hidden group">
-            <span class="text-slate-500 text-[9px] font-bold uppercase tracking-wider">當前成交價</span>
-            <input id="currentPriceDisp" type="number" step="any" class="text-lg md:text-xl font-bold bg-transparent border-none p-0 w-full focus:ring-0 outline-none leading-none mt-0.5">
+        <!-- 核心看板 (極限壓縮為一行 5 欄) -->
+        <div class="grid grid-cols-5 gap-1 md:gap-3">
+          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center relative overflow-hidden group">
+            <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前成交價</span>
+            <input id="currentPriceDisp" type="number" step="any" class="text-xs sm:text-sm md:text-xl font-bold bg-transparent border-none p-0 w-full focus:ring-0 outline-none leading-none mt-0 md:mt-0.5">
           </div>
-          <div class="card-panel px-3 py-1.5 rounded-lg flex flex-col justify-center">
-            <span class="text-slate-500 text-[9px] font-bold uppercase tracking-wider">平均成本</span>
-            <span id="avgPriceDisp" class="text-lg md:text-xl font-bold text-white leading-none mt-0.5">0</span>
+          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
+            <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">平均成本</span>
+            <span id="avgPriceDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5">0</span>
           </div>
-          <div class="card-panel px-3 py-1.5 rounded-lg flex flex-col justify-center">
-            <span class="text-slate-500 text-[9px] font-bold uppercase tracking-wider">總持股數</span>
-            <span id="totalSharesDisp" class="text-lg md:text-xl font-bold text-[#2979ff] leading-none mt-0.5">0</span>
+          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
+            <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">總持股數</span>
+            <span id="totalSharesDisp" class="text-xs sm:text-sm md:text-xl font-bold text-[#2979ff] leading-none mt-0 md:mt-0.5">0</span>
           </div>
-          <div class="card-panel px-3 py-1.5 rounded-lg flex flex-col justify-center">
-            <span class="text-slate-500 text-[9px] font-bold uppercase tracking-wider">總投入成本</span>
-            <span id="totalCostDisp" class="text-lg md:text-xl font-bold text-white leading-none mt-0.5">0</span>
+          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
+            <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">總投入成本</span>
+            <span id="totalCostDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5">0</span>
           </div>
-          <div class="card-panel px-3 py-1.5 rounded-lg flex flex-col justify-center col-span-2 md:col-span-1">
-            <span class="text-slate-500 text-[9px] font-bold uppercase tracking-wider">倉位盈虧</span>
-            <div class="flex flex-row md:flex-col items-baseline justify-between md:gap-0 mt-0.5">
-              <span id="currentPnlAmountDisp" class="text-lg md:text-xl font-bold text-slate-600 leading-none">-</span>
-              <span id="currentPnlPercentDisp" class="text-[10px] font-bold text-slate-600 leading-none">-</span>
+          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
+            <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">倉位盈虧</span>
+            <div class="flex flex-col items-start justify-center mt-0 md:mt-0.5">
+              <span id="currentPnlAmountDisp" class="text-xs sm:text-sm md:text-xl font-bold text-slate-600 leading-none">-</span>
+              <span id="currentPnlPercentDisp" class="text-[8px] md:text-[10px] font-bold text-slate-600 leading-none mt-0.5 md:mt-1">-</span>
             </div>
           </div>
         </div>
 
-        <!-- 圖表 -->
-        <div class="card-panel p-4 rounded-2xl flex flex-col">
-          <div class="flex justify-between items-center mb-3">
-            <div class="flex items-center space-x-3">
-              <h2 id="chartTitle" class="text-sm font-bold text-white">即時趨勢圖</h2>
-              <select id="chartIntervalSelect" class="text-[10px] font-bold rounded-md px-2 py-1 outline-none cursor-pointer">
+        <!-- 圖表 (縮減手機版高度) -->
+        <div class="card-panel p-2 md:p-4 rounded-2xl flex flex-col">
+          <div class="flex justify-between items-center mb-1.5 md:mb-3">
+            <div class="flex items-center space-x-2 md:space-x-3">
+              <h2 id="chartTitle" class="text-[11px] md:text-sm font-bold text-white">即時趨勢圖</h2>
+              <select id="chartIntervalSelect" class="text-[9px] md:text-[10px] font-bold rounded-md px-1 md:px-2 py-0.5 md:py-1 outline-none cursor-pointer bg-[#2a2a2a] text-white border border-[#444]">
                 <option value="1">1分</option>
                 <option value="5">5分</option>
                 <option value="15">15分</option>
@@ -440,57 +440,57 @@
                 <option value="W">週線</option>
               </select>
             </div>
-            <span id="chartDateRange" class="text-[10px] text-slate-500 font-mono">QUANTITATIVE TERMINAL</span>
+            <span id="chartDateRange" class="text-[8px] md:text-[10px] text-slate-500 font-mono hidden sm:inline">QUANTITATIVE TERMINAL</span>
           </div>
-          <div id="tvchart" class="w-full h-[450px] bg-[#0F0F0F] rounded-xl overflow-hidden border border-[#333]"></div>
+          <div id="tvchart" class="w-full h-[260px] md:h-[450px] bg-[#0F0F0F] rounded-xl overflow-hidden border border-[#333]"></div>
         </div>
 
-        <!-- 列表 -->
-        <div class="card-panel rounded-2xl overflow-hidden">
-          <div class="p-4 border-b border-[#333] flex justify-between items-center bg-[#1e1e1e]">
-            <div class="flex space-x-6 overflow-x-auto no-scrollbar">
-              <button id="tabBtnCurrent" onclick="switchRecordsTab('current')" class="text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap">當前倉位 (<span id="currentCount">0</span>)</button>
-              <button id="tabBtnHistory" onclick="switchRecordsTab('history')" class="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">歷史紀錄 (<span id="historyCount">0</span>)</button>
-              <button id="tabBtnReport" onclick="switchRecordsTab('report')" class="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">收益日曆</button>
-              <button id="tabBtnDetails" onclick="switchRecordsTab('details')" class="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">盈虧明細</button>
+        <!-- 列表 (縮減表格 Padding) -->
+        <div class="card-panel rounded-2xl overflow-hidden flex flex-col flex-1 min-h-[300px]">
+          <div class="p-2 md:p-4 border-b border-[#333] flex justify-between items-center bg-[#1e1e1e]">
+            <div class="flex space-x-2 md:space-x-6 overflow-x-auto no-scrollbar">
+              <button id="tabBtnCurrent" onclick="switchRecordsTab('current')" class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap">當前倉位 (<span id="currentCount">0</span>)</button>
+              <button id="tabBtnHistory" onclick="switchRecordsTab('history')" class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">歷史紀錄 (<span id="historyCount">0</span>)</button>
+              <button id="tabBtnReport" onclick="switchRecordsTab('report')" class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">收益日曆</button>
+              <button id="tabBtnDetails" onclick="switchRecordsTab('details')" class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 pb-1 transition-all whitespace-nowrap">盈虧明細</button>
             </div>
-            <div class="flex space-x-3 shrink-0">
-              <button id="clearBtn" class="hidden text-[10px] font-bold text-slate-500 hover:text-rose-500 transition-colors">RE-CALCULATE</button>
-              <div id="historyActions" class="hidden flex items-center space-x-2 md:space-x-3">
-                <input type="text" id="historySearchInput" placeholder="🔍 搜尋代號" class="w-24 md:w-32 bg-[#2a2a2a] border border-[#444] rounded px-2 py-1 text-[10px] outline-none focus:border-[#2979ff] text-white uppercase transition-all shadow-sm">
-                <button onclick="openManualHistoryModal()" class="text-[10px] font-bold text-[#2979ff] hover:text-white transition-colors border border-[#2979ff]/40 px-2 py-1 rounded shadow-sm whitespace-nowrap">➕ 手動加入</button>
+            <div class="flex space-x-2 md:space-x-3 shrink-0 ml-2">
+              <button id="clearBtn" class="hidden text-[9px] md:text-[10px] font-bold text-slate-500 hover:text-rose-500 transition-colors">RE-CALCULATE</button>
+              <div id="historyActions" class="hidden flex items-center space-x-1.5 md:space-x-3">
+                <input type="text" id="historySearchInput" placeholder="🔍 搜尋" class="w-16 sm:w-24 md:w-32 bg-[#2a2a2a] border border-[#444] rounded px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] outline-none focus:border-[#2979ff] text-white uppercase transition-all shadow-sm">
+                <button onclick="openManualHistoryModal()" class="text-[9px] md:text-[10px] font-bold text-[#2979ff] hover:text-white transition-colors border border-[#2979ff]/40 px-1.5 md:px-2 py-1 rounded shadow-sm whitespace-nowrap">➕ <span class="hidden sm:inline">手動加入</span></button>
               </div>
             </div>
           </div>
           
-          <div id="currentRecordsView" class="overflow-x-auto block min-h-[400px]">
-            <table class="w-full text-left text-xs">
+          <div id="currentRecordsView" class="overflow-x-auto block">
+            <table class="w-full text-left text-xs min-w-[320px]">
               <thead>
-                <tr class="text-slate-500 border-b border-[#333]">
-                  <th class="px-6 py-3 font-bold uppercase tracking-wider">代號</th>
-                  <th class="px-6 py-3 font-bold uppercase tracking-wider">數量</th>
-                  <th class="px-6 py-3 font-bold uppercase tracking-wider">價位</th>
-                  <th class="px-6 py-3 font-bold uppercase tracking-wider">小計</th>
-                  <th class="px-6 py-3 font-bold uppercase tracking-wider">倉位盈虧</th>
-                  <th class="px-6 py-3 text-right">ACTION</th>
+                <tr class="text-slate-500 border-b border-[#333] bg-[#1e1e1e]">
+                  <th class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">代號</th>
+                  <th class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">數量</th>
+                  <th class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">價位</th>
+                  <th class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">小計</th>
+                  <th class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">倉位盈虧</th>
+                  <th class="px-1.5 py-1.5 md:px-6 md:py-3 text-right text-[9px] md:text-xs whitespace-nowrap">ACTION</th>
                 </tr>
               </thead>
               <tbody id="recordsTableBody" class="divide-y divide-[#333]"></tbody>
             </table>
           </div>
 
-          <div id="historyRecordsView" class="hidden max-h-[650px] min-h-[400px] overflow-auto custom-scrollbar">
-            <table class="w-full text-left text-xs min-w-[650px]">
+          <div id="historyRecordsView" class="hidden max-h-[650px] overflow-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[500px] md:min-w-[650px]">
               <thead class="sticky top-0 bg-[#1e1e1e] z-10 shadow-sm">
                 <tr class="text-slate-500 border-b border-[#333]">
-                  <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">時間</th>
-                  <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">代號</th>
-                  <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">數量</th>
-                  <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">買入價</th>
-                  <th class="px-2 py-3 font-bold uppercase tracking-wider whitespace-nowrap text-center">賣出價</th>
-                  <th class="px-2 py-3 font-bold uppercase tracking-wider whitespace-nowrap text-center">手續費</th>
-                  <th class="px-4 py-3 font-bold uppercase tracking-wider whitespace-nowrap">結算盈虧</th>
-                  <th class="px-4 py-3 text-right whitespace-nowrap">ACTION</th>
+                  <th class="px-1.5 py-1.5 md:px-4 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">時間</th>
+                  <th class="px-1.5 py-1.5 md:px-4 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">代號</th>
+                  <th class="px-1.5 py-1.5 md:px-4 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">數量</th>
+                  <th class="px-1.5 py-1.5 md:px-4 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">買入價</th>
+                  <th class="px-1 py-1.5 md:px-2 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap text-center">賣出價</th>
+                  <th class="px-1 py-1.5 md:px-2 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap text-center">手續費</th>
+                  <th class="px-1.5 py-1.5 md:px-4 md:py-3 font-bold uppercase tracking-wider text-[9px] md:text-xs whitespace-nowrap">結算盈虧</th>
+                  <th class="px-1.5 py-1.5 md:px-4 md:py-3 text-right text-[9px] md:text-xs whitespace-nowrap">ACTION</th>
                 </tr>
               </thead>
               <tbody id="historyTableBody" class="divide-y divide-[#333]"></tbody>
@@ -498,7 +498,7 @@
           </div>
 
           <!-- 新增：收益報表視圖 -->
-          <div id="reportView" class="hidden p-4 max-h-[650px] min-h-[400px] overflow-y-auto custom-scrollbar bg-[#1e1e1e]">
+          <div id="reportView" class="hidden p-2 md:p-4 max-h-[650px] overflow-y-auto custom-scrollbar bg-[#1e1e1e]">
             <div class="flex justify-between items-center mb-5">
               <h3 class="text-sm font-bold text-white flex items-center">收益日曆 <span class="text-[10px] ml-2 text-slate-400 font-normal bg-slate-800 px-1.5 py-0.5 rounded border border-slate-600">依已平倉結算</span></h3>
               <div class="flex items-center space-x-2">
@@ -2185,40 +2185,40 @@
       
       // 加入清空後的無紀錄提示
       if (records.length === 0) {
-        els.recordsTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">尚無任何當前倉位</td></tr>';
+        els.recordsTableBody.innerHTML = '<tr><td colspan="6" class="px-1.5 py-4 md:px-6 md:py-8 text-center text-slate-500 text-[10px] md:text-sm">尚無任何當前倉位</td></tr>';
         return;
       }
 
       const currentPrice = els.currentPriceDisp ? parseFloat(els.currentPriceDisp.value) : NaN;
       
       els.recordsTableBody.innerHTML = records.map((r, index) => {
-        let pnlHtml = '<td class="px-6 py-3 text-slate-500">-</td>';
+        let pnlHtml = '<td class="px-1.5 py-1.5 md:px-6 md:py-3 text-slate-500 text-[10px] md:text-sm">-</td>';
         const isShort = r.direction === 'short';
-        const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[9px] ml-1">多</span>';
+        const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">多</span>';
         
         // 取消紅方框，改用純文字+光暈呼吸燈特效
-        const newBadge = index === 0 ? '<span class="ml-2 text-[#ff5252] text-[9px] font-black italic tracking-wider animate-pulse drop-shadow-[0_0_5px_rgba(255,82,82,0.8)]">NEW</span>' : '';
+        const newBadge = index === 0 ? '<span class="ml-1 md:ml-2 text-[#ff5252] text-[8px] md:text-[9px] font-black italic tracking-wider animate-pulse drop-shadow-[0_0_5px_rgba(255,82,82,0.8)]">NEW</span>' : '';
         
         if (!isNaN(currentPrice)) {
           const rowPnl = (currentPrice - r.price) * r.quantity;
           const rowPnlPct = ((currentPrice - r.price) / r.price) * 100;
           const color = rowPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
           const sign = rowPnl > 0 ? '+' : '';
-          pnlHtml = `<td class="px-6 py-3 font-bold ${color}">${sign}${formatNumber(rowPnl)} <span class="text-[10px] opacity-70 ml-1">(${sign}${formatNumber(rowPnlPct)}%)</span></td>`;
+          pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold text-[10px] md:text-sm ${color}">${sign}${formatNumber(rowPnl)} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${sign}${formatNumber(rowPnlPct)}%)</span></td>`;
         }
 
         return `
         <tr class="hover:bg-white/[0.03] transition-colors">
-          <td class="px-6 py-3 font-bold text-[#2979ff] cursor-pointer whitespace-nowrap" onclick="selectTicker('${r.ticker}')">
+          <td class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold text-[10px] md:text-sm text-[#2979ff] cursor-pointer whitespace-nowrap" onclick="selectTicker('${r.ticker}')">
             <div class="flex items-center">
               ${r.ticker}${dirHtml}${newBadge}
             </div>
           </td>
-          <td class="px-6 py-3">${formatNumber(r.quantity)}</td>
-          <td class="px-6 py-3 text-slate-300">$${formatNumber(r.price, 4)}</td>
-          <td class="px-6 py-3 text-slate-400">$${formatNumber(r.cost)}</td>
+          <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm">${formatNumber(r.quantity)}</td>
+          <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm text-slate-300">$${formatNumber(r.price, 4)}</td>
+          <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm text-slate-400">$${formatNumber(r.cost)}</td>
           ${pnlHtml}
-          <td class="px-6 py-3 text-right"><button onclick="deleteRecord('${r.id}')" class="text-slate-600 hover:text-rose-500">${svgIconTrash}</button></td>
+          <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-right"><button onclick="deleteRecord('${r.id}')" class="text-slate-600 hover:text-rose-500 scale-90 md:scale-100">${svgIconTrash}</button></td>
         </tr>`
       }).join('');
     }
@@ -2232,7 +2232,7 @@
       if(els.historyTableBody) {
         // 加入清空後的無紀錄提示與搜尋不到的提示
         if (filteredHistory.length === 0) {
-          els.historyTableBody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">${query ? '找不到符合「' + query + '」的紀錄' : '尚無歷史交易紀錄'}</td></tr>`;
+          els.historyTableBody.innerHTML = `<tr><td colspan="8" class="px-1.5 py-4 md:px-6 md:py-8 text-center text-slate-500 text-[10px] md:text-sm">${query ? '找不到符合「' + query + '」的紀錄' : '尚無歷史交易紀錄'}</td></tr>`;
           return;
         }
 
@@ -2254,7 +2254,7 @@
           if (monthStr !== currentMonthStr) {
             htmlStr += `
               <tr class="bg-[#2a2a2a]/80">
-                <td colspan="8" class="px-4 py-1.5 text-xs font-bold text-[#2979ff] border-y border-[#333] tracking-widest">${monthStr}</td>
+                <td colspan="8" class="px-1.5 md:px-4 py-1 md:py-1.5 text-[10px] md:text-xs font-bold text-[#2979ff] border-y border-[#333] tracking-widest">${monthStr}</td>
               </tr>
             `;
             currentMonthStr = monthStr;
@@ -2263,10 +2263,10 @@
           let pnlHtml = '<span class="text-slate-600">-</span>';
           const sPrice = parseFloat(r.sellPrice);
           const isShort = r.direction === 'short';
-          const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[9px] ml-1">多</span>';
+          const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">多</span>';
           
           // 為歷史紀錄的第一筆也加上無框光暈 NEW
-          const newBadge = index === 0 ? '<span class="ml-2 text-[#ff5252] text-[9px] font-black italic tracking-wider animate-pulse drop-shadow-[0_0_5px_rgba(255,82,82,0.8)]">NEW</span>' : '';
+          const newBadge = index === 0 ? '<span class="ml-1 md:ml-2 text-[#ff5252] text-[8px] md:text-[9px] font-black italic tracking-wider animate-pulse drop-shadow-[0_0_5px_rgba(255,82,82,0.8)]">NEW</span>' : '';
           
           if (!isNaN(sPrice)) {
             const fee = parseFloat(r.fee) || 0;
@@ -2274,28 +2274,28 @@
             const pnlPct = (pnl / (r.price * r.quantity)) * 100;
             const color = pnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
             const sign = pnl > 0 ? '+' : '';
-            pnlHtml = `<span class="font-bold ${color}">${sign}${formatNumber(pnl)} <span class="text-[10px] opacity-70 ml-1">(${sign}${formatNumber(pnlPct)}%)</span></span>`;
+            pnlHtml = `<span class="font-bold ${color}">${sign}${formatNumber(pnl)} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${sign}${formatNumber(pnlPct)}%)</span></span>`;
           }
 
           htmlStr += `
-          <tr class="hover:bg-white/[0.03] transition-colors">
-            <td class="px-4 py-3 text-slate-600 font-mono whitespace-nowrap">${r.time}</td>
-            <td class="px-4 py-3 font-bold text-[#2979ff] cursor-pointer whitespace-nowrap" onclick="selectTicker('${r.ticker}')">
+          <tr class="hover:bg-white/[0.03] transition-colors text-[10px] md:text-sm">
+            <td class="px-1.5 md:px-4 py-1.5 md:py-3 text-slate-600 font-mono whitespace-nowrap text-[9px] md:text-sm">${r.time}</td>
+            <td class="px-1.5 md:px-4 py-1.5 md:py-3 font-bold text-[#2979ff] cursor-pointer whitespace-nowrap" onclick="selectTicker('${r.ticker}')">
               <div class="flex items-center">
                 ${r.ticker}${dirHtml}${newBadge}
               </div>
             </td>
-            <td class="px-4 py-3 whitespace-nowrap">${formatNumber(r.quantity)}</td>
-            <td class="px-4 py-3 text-slate-300 whitespace-nowrap">$${formatNumber(r.price, 4)}</td>
-            <td class="px-2 py-2 text-center">
-              <input type="number" step="any" placeholder="-" value="${r.sellPrice !== undefined ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-16 px-1.5 py-1 text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入賣出價">
+            <td class="px-1.5 md:px-4 py-1.5 md:py-3 whitespace-nowrap">${formatNumber(r.quantity)}</td>
+            <td class="px-1.5 md:px-4 py-1.5 md:py-3 text-slate-300 whitespace-nowrap">$${formatNumber(r.price, 4)}</td>
+            <td class="px-1 md:px-2 py-1 md:py-2 text-center">
+              <input type="number" step="any" placeholder="-" value="${r.sellPrice !== undefined ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入賣出價">
             </td>
-            <td class="px-2 py-2 text-center">
-              <input type="number" step="any" placeholder="-" value="${r.fee !== undefined ? r.fee : ''}" onchange="updateHistoryTrade('${r.id}', 'fee', this.value)" class="w-14 px-1.5 py-1 text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入手續費">
+            <td class="px-1 md:px-2 py-1 md:py-2 text-center">
+              <input type="number" step="any" placeholder="-" value="${r.fee !== undefined ? r.fee : ''}" onchange="updateHistoryTrade('${r.id}', 'fee', this.value)" class="w-10 md:w-14 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入手續費">
             </td>
-            <td class="px-4 py-3 whitespace-nowrap">${pnlHtml}</td>
-            <td class="px-4 py-3 text-right whitespace-nowrap">
-              <button onclick="openEditHistoryModal('${r.id}')" class="text-slate-500 hover:text-[#2979ff] p-1 transition-colors" title="設定與編輯">
+            <td class="px-1.5 md:px-4 py-1.5 md:py-3 whitespace-nowrap">${pnlHtml}</td>
+            <td class="px-1.5 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap">
+              <button onclick="openEditHistoryModal('${r.id}')" class="text-slate-500 hover:text-[#2979ff] p-1 transition-colors scale-90 md:scale-100" title="設定與編輯">
                 ${svgIconSettings}
               </button>
             </td>
