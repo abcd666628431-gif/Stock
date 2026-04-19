@@ -570,7 +570,7 @@
     // --- Firebase 雲端同步與初始化 ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     let firebaseConfig;
     try {
@@ -590,36 +590,29 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    
-    let db;
-    try {
-        // 導入行程助手同款的強大本地快取與多分頁管理器，實現更無縫的 0 延遲同步
-        db = initializeFirestore(app, {
-            localCache: persistentLocalCache({
-                tabManager: persistentMultipleTabManager()
-            })
-        });
-    } catch (e) {
-        db = getFirestore(app);
-    }
+    const db = getFirestore(app); // 恢復使用最穩定的標準連線，不使用容易被手機阻擋的快取機制
     
     const appIdStr = typeof __app_id !== 'undefined' ? __app_id : 'stock-calculator-pro';
 
     let currentUser = null;
-    let isApplyingCloudData = false; // 絕對同步鎖
     let unsubscribeSnapshot = null;
+    
+    // --- 核心重製：時間戳回音消除機制 ---
+    let lastLocalSyncTime = 0; 
+    let syncDebounceTimer = null;
 
     const syncStatusEl = document.getElementById('cloudSyncStatus');
     function updateSyncStatus(status) {
       if(!syncStatusEl) return;
+      const uidShort = currentUser ? `(#${currentUser.uid.slice(-4).toUpperCase()})` : '';
       if(status === 'syncing') {
-          syncStatusEl.innerHTML = '☁️ 同步中...';
+          syncStatusEl.innerHTML = `☁️ 同步中... ${uidShort}`;
           syncStatusEl.className = 'text-[10px] text-amber-400 ml-3 animate-pulse';
       } else if (status === 'synced') {
-          syncStatusEl.innerHTML = '☁️ 即時同步';
+          syncStatusEl.innerHTML = `☁️ 即時同步 ${uidShort}`;
           syncStatusEl.className = 'text-[10px] text-[#00e676] ml-3';
       } else if (status === 'error') {
-          syncStatusEl.innerHTML = '☁️ 離線模式';
+          syncStatusEl.innerHTML = `☁️ 離線模式 ${uidShort}`;
           syncStatusEl.className = 'text-[10px] text-slate-500 ml-3';
       }
     }
@@ -647,7 +640,6 @@
     onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
-        // 徹底捨棄手動同步碼，改為綁定平台底層唯一帳號 ID (UID)
         setupFirebaseListener(user.uid); 
       }
     });
@@ -656,35 +648,39 @@
        updateSyncStatus('syncing');
        if (unsubscribeSnapshot) unsubscribeSnapshot();
 
-       // 採用最高安全規格的私有路徑 (users/uid)，保護倉位隱私不外洩
+       // 採用最高安全規格的私有路徑 (users/uid)
        const docRef = doc(db, 'artifacts', appIdStr, 'users', uid, 'calculatorData', 'state');
        unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
            if (docSnap.exists()) {
-               isApplyingCloudData = true; // 開啟嚴格同步鎖，阻擋攔截器
-               try {
-                   const data = docSnap.data();
-                   
-                   records = data.records || [];
-                   tradeHistory = data.tradeHistory || [];
-                   savedTickers = data.savedTickers || [];
-                   priceAlerts = data.priceAlerts || [];
-                   
-                   window.localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
-                   window.localStorage.setItem(STORAGE_KEY_TICKERS, JSON.stringify(savedTickers));
-                   window.localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(priceAlerts));
-                   window.localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify({records, ticker: els.tickerInput ? els.tickerInput.value : ''}));
-                   
-                   calculateCore();
-                   renderHistoryTable();
-                   if(activeRecordsTab === 'report') renderReport();
-                   if(activeRecordsTab === 'details') renderDetails();
-                   renderAlerts();
-                   renderTickerDropdown();
-                   
-                   updateSyncStatus('synced');
-               } finally {
-                   isApplyingCloudData = false; // 畫面更新完畢，立即解鎖，零延遲
+               const data = docSnap.data();
+               
+               // 💡 時間戳防衝突：如果雲端資料的更新時間，比我們剛上傳的時間還舊(或一樣)，就忽略它，避免回音覆寫
+               if (data.updatedAt && data.updatedAt <= lastLocalSyncTime) {
+                   return; 
                }
+
+               // 這是來自其他裝置的「較新資料」，執行無縫替換
+               records = data.records || [];
+               tradeHistory = data.tradeHistory || [];
+               savedTickers = data.savedTickers || [];
+               priceAlerts = data.priceAlerts || [];
+               
+               // 靜默寫入 LocalStorage，避免再次觸發攔截器上傳
+               window.localStorage.setItem('stockCalcLocalUI_PRO_Silent', 'true');
+               window.localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
+               window.localStorage.setItem(STORAGE_KEY_TICKERS, JSON.stringify(savedTickers));
+               window.localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(priceAlerts));
+               window.localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify({records, ticker: els.tickerInput ? els.tickerInput.value : ''}));
+               window.localStorage.removeItem('stockCalcLocalUI_PRO_Silent');
+               
+               calculateCore();
+               renderHistoryTable();
+               if(activeRecordsTab === 'report') renderReport();
+               if(activeRecordsTab === 'details') renderDetails();
+               renderAlerts();
+               renderTickerDropdown();
+               
+               updateSyncStatus('synced');
            } else {
                updateSyncStatus('synced');
            }
@@ -698,37 +694,47 @@
        });
     }
 
-    window.syncToCloud = async function() {
-       if (!currentUser || isApplyingCloudData) return; // 正在套用雲端資料時，絕對不可反向覆寫
-       
+    window.syncToCloud = function() {
+       if (!currentUser) return;
        updateSyncStatus('syncing');
        
-       try {
-           const docRef = doc(db, 'artifacts', appIdStr, 'users', currentUser.uid, 'calculatorData', 'state');
-           const stateToSave = {
-               records,
-               tradeHistory,
-               savedTickers,
-               priceAlerts
-           };
-           // 移除 1.5 秒延遲，實現真正 0 延遲即時上傳
-           await setDoc(docRef, JSON.parse(JSON.stringify(stateToSave)), { merge: true });
-           updateSyncStatus('synced');
-       } catch (e) {
-           console.error("Sync error", e);
-           if (e.message && e.message.includes('Missing or insufficient permissions')) {
-               showToast('雲端儲存失敗：權限不足，請檢查 Firebase 設定', 'error');
+       if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+       
+       // 採用 0.8 秒防抖動：保護資料庫不被快速點擊塞爆，同時保持極高的即時感
+       syncDebounceTimer = setTimeout(async () => {
+           try {
+               lastLocalSyncTime = Date.now(); // 記錄本次手動更新的時間戳
+               
+               const docRef = doc(db, 'artifacts', appIdStr, 'users', currentUser.uid, 'calculatorData', 'state');
+               const stateToSave = {
+                   records,
+                   tradeHistory,
+                   savedTickers,
+                   priceAlerts,
+                   updatedAt: lastLocalSyncTime // 將時間戳夾帶上傳
+               };
+               
+               await setDoc(docRef, JSON.parse(JSON.stringify(stateToSave)), { merge: true });
+               updateSyncStatus('synced');
+           } catch (e) {
+               console.error("Sync error", e);
+               if (e.message && e.message.includes('Missing or insufficient permissions')) {
+                   showToast('雲端儲存失敗：權限不足，請檢查 Firebase 設定', 'error');
+               }
+               updateSyncStatus('error');
            }
-           updateSyncStatus('error');
-       }
+       }, 800);
     };
 
     // --- 攔截 localStorage 自動觸發雲端同步 ---
     const originalSetItem = window.localStorage.setItem;
     window.localStorage.setItem = function(key, value) {
         originalSetItem.apply(window.localStorage, arguments);
-        // 只有在非「雲端資料覆寫」狀態下修改資料，才會觸發上傳
-        if (!isApplyingCloudData && [STORAGE_KEY_STATE, STORAGE_KEY_HISTORY, STORAGE_KEY_TICKERS, STORAGE_KEY_ALERTS].includes(key)) {
+        
+        // 如果是靜默寫入 (來自雲端下載的資料)，則不觸發上傳
+        if (window.localStorage.getItem('stockCalcLocalUI_PRO_Silent') === 'true') return;
+
+        if ([STORAGE_KEY_STATE, STORAGE_KEY_HISTORY, STORAGE_KEY_TICKERS, STORAGE_KEY_ALERTS].includes(key)) {
             if (typeof window.syncToCloud === 'function') window.syncToCloud();
         }
     };
