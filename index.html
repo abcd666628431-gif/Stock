@@ -600,10 +600,11 @@
     let currentUser = null;
     let unsubscribeSnapshot = null;
     
-    // --- 核心重製：連線識別碼 (Session ID) 與 無敵防護罩 ---
+    // --- 核心重製：連線識別碼 (Session ID) 與 狀態鎖 ---
     const myClientId = Math.random().toString(36).substring(2, 15); 
     let syncDebounceTimer = null;
-    let lastUserActionTime = 0; // 💡 新增：防呆鎖定時間，防止手機慢速網路時被舊資料覆蓋
+    let isSystemUpdating = false;    // 🔴 鎖定：系統正在處理畫面，禁止上傳
+    let hasInitialCloudSync = false; // 🔴 鎖定：尚未確認雲端狀態前，禁止任何上傳覆蓋行為
 
     const syncStatusEl = document.getElementById('cloudSyncStatus');
     function updateSyncStatus(status) {
@@ -654,17 +655,15 @@
        // 綁定網址 AppID。打破不同裝置/無痕模式的隔閡
        const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'calculatorData', 'global_state');
        unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
+           hasInitialCloudSync = true; // ✅ 已與雲端接軌，解除初次上傳限制
+
            if (docSnap.exists()) {
                const data = docSnap.data();
                
-               // 💡 終極防衝突 1：只要這包資料的發送者是「我自己」，就忽略它，避免回音覆寫
+               // 💡 終極防衝突：只要這包資料的發送者是「我自己」，就忽略它，避免回音覆寫
                if (data.lastUpdatedBy === myClientId) return; 
                
-               // 💡 終極防衝突 2：如果使用者剛按了新增/刪除 (2秒內)，絕對不允許雲端舊資料蓋掉剛輸入的畫面！
-               if (Date.now() - lastUserActionTime < 2000) {
-                   console.log("保護機制觸發：拒絕延遲的雲端舊資料覆蓋畫面");
-                   return;
-               }
+               isSystemUpdating = true; // 🔴 鎖定：接收雲端資料時，禁止反向上傳
 
                // 這是來自其他裝置的「較新資料」，執行無縫替換
                records = data.records || [];
@@ -672,25 +671,18 @@
                savedTickers = data.savedTickers || [];
                priceAlerts = data.priceAlerts || [];
                
-               // 靜默寫入 LocalStorage，加入 try-catch 保護 Safari 無痕模式
                try {
-                   window.localStorage.setItem('stockCalcLocalUI_PRO_Silent', 'true');
-                   window.localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
-                   window.localStorage.setItem(STORAGE_KEY_TICKERS, JSON.stringify(savedTickers));
-                   window.localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(priceAlerts));
-                   
-                   calculateCore(); // 內部會觸發 STORAGE_KEY_STATE 的儲存
+                   calculateCore();
                    renderHistoryTable();
                    if(activeRecordsTab === 'report') renderReport();
                    if(activeRecordsTab === 'details') renderDetails();
                    renderAlerts();
                    renderTickerDropdown();
-                   
-                   window.localStorage.removeItem('stockCalcLocalUI_PRO_Silent');
                } catch (e) {
-                   console.warn("Storage Error during sync", e);
+                   console.warn("UI Update Error during sync", e);
                }
                
+               isSystemUpdating = false; // 🟢 解除鎖定
                updateSyncStatus('synced');
            } else {
                // 如果雲端是空的，但電腦本地有舊資料，立刻強制推上雲端
@@ -709,6 +701,12 @@
 
     window.syncToCloud = function(forcePush = false) {
        if (!currentUser) return;
+
+       // 💡 終極防護：在還沒確認雲端狀態前，絕對不允許上傳覆蓋！
+       if (!hasInitialCloudSync && !forcePush) return;
+       // 💡 防止系統處理畫面時，不小心觸發反向上傳
+       if (isSystemUpdating && !forcePush) return;
+
        updateSyncStatus('syncing');
        
        if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
@@ -732,7 +730,7 @@
            }
        };
 
-       // 💡 將延遲大幅縮短至 10ms (原本 800ms)。解決手機新增資料後秒關螢幕或切換APP導致上傳失敗的痛點！
+       // 將延遲大幅縮短至 10ms，確保秒關螢幕也能成功上傳
        if (forcePush) {
            executeUpload();
        } else {
@@ -751,13 +749,10 @@
         // 阻擋不必要的重複上傳：只有資料真的有變才觸發
         if (oldValue === value) return;
         
-        // 如果是靜默寫入 (來自雲端下載的資料)，則不觸發上傳
-        let isSilent = false;
-        try { isSilent = window.localStorage.getItem('stockCalcLocalUI_PRO_Silent') === 'true'; } catch(e) {}
-        if (isSilent) return;
+        // 💡 如果是系統初始載入或接收雲端資料中，禁止觸發上傳
+        if (isSystemUpdating) return;
 
         if ([STORAGE_KEY_STATE, STORAGE_KEY_HISTORY, STORAGE_KEY_TICKERS, STORAGE_KEY_ALERTS].includes(key)) {
-            lastUserActionTime = Date.now(); // 💡 記錄使用者修改瞬間，觸發2秒無敵防呆鎖定
             if (typeof window.syncToCloud === 'function') window.syncToCloud();
         }
     };
@@ -2308,12 +2303,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      isSystemUpdating = true; // 🔴 鎖定：初始化載入時，禁止將本地舊資料推上雲端
       loadAndMigrateData();
       updateSoundUI(); 
       if(els.tickerInput && els.tickerInput.value) { 
         fetchStockData(); 
         if(els.autoRefreshCheckbox && els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); 
       }
+      isSystemUpdating = false; // 🟢 載入完畢，解除鎖定
     });
   </script>
 </body>
