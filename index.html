@@ -600,8 +600,10 @@
     let currentUser = null;
     let unsubscribeSnapshot = null;
     
-    // --- 核心重製：時間戳回音消除機制 ---
-    let lastLocalSyncTime = 0; 
+    // --- 核心重製：連線識別碼 (Session ID) ---
+    // 💡 徹底放棄使用時間戳，改用每次重整網頁都會產生的一組亂碼。
+    // 這樣完全不受手機與電腦的「時鐘誤差」影響，只要發出者 ID 不同就 100% 接收覆寫！
+    const myClientId = Math.random().toString(36).substring(2, 15); 
     let syncDebounceTimer = null;
 
     const syncStatusEl = document.getElementById('cloudSyncStatus');
@@ -656,12 +658,10 @@
            if (docSnap.exists()) {
                const data = docSnap.data();
                
-               // 💡 時間戳防衝突：如果雲端資料的更新時間，比我們剛上傳的時間還舊(或一樣)，就忽略它，避免回音覆寫
-               if (data.updatedAt && data.updatedAt <= lastLocalSyncTime) {
+               // 💡 終極防衝突：只要這包資料的發送者是「我自己」，就忽略它，避免回音覆寫。
+               if (data.lastUpdatedBy === myClientId) {
                    return; 
                }
-               
-               lastLocalSyncTime = data.updatedAt || Date.now(); // 同步雲端時間戳
 
                // 這是來自其他裝置的「較新資料」，執行無縫替換
                records = data.records || [];
@@ -712,8 +712,6 @@
        
        const executeUpload = async () => {
            try {
-               lastLocalSyncTime = Date.now(); // 記錄本次手動更新的時間戳
-               
                // 💡 對應上方的網址綁定路徑
                const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'calculatorData', 'global_state');
                const stateToSave = {
@@ -721,7 +719,7 @@
                    tradeHistory,
                    savedTickers,
                    priceAlerts,
-                   updatedAt: lastLocalSyncTime // 將時間戳夾帶上傳
+                   lastUpdatedBy: myClientId // 💡 夾帶自己的識別碼，取代舊版的時間戳
                };
                
                await setDoc(docRef, JSON.parse(JSON.stringify(stateToSave)), { merge: true });
