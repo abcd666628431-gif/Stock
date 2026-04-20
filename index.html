@@ -1832,9 +1832,13 @@
         "locale": "zh_TW",
         "backgroundColor": "#0F0F0F",
         "gridColor": "rgba(242, 242, 242, 0.06)",
-        "hide_side_toolbar": true,
+        "hide_side_toolbar": false, // 💡 解鎖左側專業繪圖工具列，允許手動畫線
+        "allow_symbol_change": false,
         "container_id": "tvchart",
-        "studies": ["PriceHighLow@tv-basicstudies"],
+        "studies": [
+          "MASimple@tv-basicstudies", // 💡 自動畫出 SMA 移動平均線 (數學趨勢線)
+          "MACD@tv-basicstudies"      // 💡 自動畫出 MACD 底部動能指標
+        ],
       });
       currentChartSymbol = symbol;
     }
