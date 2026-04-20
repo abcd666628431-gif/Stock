@@ -600,11 +600,10 @@
     let currentUser = null;
     let unsubscribeSnapshot = null;
     
-    // --- 核心重製：連線識別碼 (Session ID) ---
-    // 💡 徹底放棄使用時間戳，改用每次重整網頁都會產生的一組亂碼。
-    // 這樣完全不受手機與電腦的「時鐘誤差」影響，只要發出者 ID 不同就 100% 接收覆寫！
+    // --- 核心重製：連線識別碼 (Session ID) 與 無敵防護罩 ---
     const myClientId = Math.random().toString(36).substring(2, 15); 
     let syncDebounceTimer = null;
+    let lastUserActionTime = 0; // 💡 新增：防呆鎖定時間，防止手機慢速網路時被舊資料覆蓋
 
     const syncStatusEl = document.getElementById('cloudSyncStatus');
     function updateSyncStatus(status) {
@@ -644,7 +643,7 @@
     onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
-        setupFirebaseListener(); // 💡 拔除 UID 綁定
+        setupFirebaseListener(); // 拔除 UID 綁定
       }
     });
 
@@ -652,15 +651,19 @@
        updateSyncStatus('syncing');
        if (unsubscribeSnapshot) unsubscribeSnapshot();
 
-       // 💡 核心突破：模仿行程助手，改用「公共空間 (public/data)」並綁定網址 AppID。完全打破不同裝置/無痕模式的隔閡！
+       // 綁定網址 AppID。打破不同裝置/無痕模式的隔閡
        const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'calculatorData', 'global_state');
        unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
            if (docSnap.exists()) {
                const data = docSnap.data();
                
-               // 💡 終極防衝突：只要這包資料的發送者是「我自己」，就忽略它，避免回音覆寫。
-               if (data.lastUpdatedBy === myClientId) {
-                   return; 
+               // 💡 終極防衝突 1：只要這包資料的發送者是「我自己」，就忽略它，避免回音覆寫
+               if (data.lastUpdatedBy === myClientId) return; 
+               
+               // 💡 終極防衝突 2：如果使用者剛按了新增/刪除 (2秒內)，絕對不允許雲端舊資料蓋掉剛輸入的畫面！
+               if (Date.now() - lastUserActionTime < 2000) {
+                   console.log("保護機制觸發：拒絕延遲的雲端舊資料覆蓋畫面");
+                   return;
                }
 
                // 這是來自其他裝置的「較新資料」，執行無縫替換
@@ -669,24 +672,28 @@
                savedTickers = data.savedTickers || [];
                priceAlerts = data.priceAlerts || [];
                
-               // 靜默寫入 LocalStorage，避免再次觸發攔截器上傳
-               window.localStorage.setItem('stockCalcLocalUI_PRO_Silent', 'true');
-               window.localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
-               window.localStorage.setItem(STORAGE_KEY_TICKERS, JSON.stringify(savedTickers));
-               window.localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(priceAlerts));
-               window.localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify({records, ticker: els.tickerInput ? els.tickerInput.value : ''}));
-               window.localStorage.removeItem('stockCalcLocalUI_PRO_Silent');
-               
-               calculateCore();
-               renderHistoryTable();
-               if(activeRecordsTab === 'report') renderReport();
-               if(activeRecordsTab === 'details') renderDetails();
-               renderAlerts();
-               renderTickerDropdown();
+               // 靜默寫入 LocalStorage，加入 try-catch 保護 Safari 無痕模式
+               try {
+                   window.localStorage.setItem('stockCalcLocalUI_PRO_Silent', 'true');
+                   window.localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
+                   window.localStorage.setItem(STORAGE_KEY_TICKERS, JSON.stringify(savedTickers));
+                   window.localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(priceAlerts));
+                   
+                   calculateCore(); // 內部會觸發 STORAGE_KEY_STATE 的儲存
+                   renderHistoryTable();
+                   if(activeRecordsTab === 'report') renderReport();
+                   if(activeRecordsTab === 'details') renderDetails();
+                   renderAlerts();
+                   renderTickerDropdown();
+                   
+                   window.localStorage.removeItem('stockCalcLocalUI_PRO_Silent');
+               } catch (e) {
+                   console.warn("Storage Error during sync", e);
+               }
                
                updateSyncStatus('synced');
            } else {
-               // 💡 如果雲端是空的，但電腦本地有舊資料，立刻強制將舊資料「推」上雲端！
+               // 如果雲端是空的，但電腦本地有舊資料，立刻強制推上雲端
                if (records.length > 0 || tradeHistory.length > 0 || savedTickers.length > 0) {
                    console.log("偵測到本地舊資料，正在自動將舊資料備份至雲端...");
                    if (typeof window.syncToCloud === 'function') window.syncToCloud(true);
@@ -696,10 +703,6 @@
            }
        }, (err) => {
            console.error("Firestore Listen Error:", err);
-           if (err.message && err.message.includes('Missing or insufficient permissions')) {
-               console.error("提示：如果您在外部環境使用自己的 Firebase，請至 Firebase Console 修改 Firestore Security Rules 允許讀寫。");
-               showToast('同步失敗：請檢查 Firebase 安全規則', 'error');
-           }
            updateSyncStatus('error');
        });
     }
@@ -712,48 +715,49 @@
        
        const executeUpload = async () => {
            try {
-               // 💡 對應上方的網址綁定路徑
                const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'calculatorData', 'global_state');
                const stateToSave = {
                    records,
                    tradeHistory,
                    savedTickers,
                    priceAlerts,
-                   lastUpdatedBy: myClientId // 💡 夾帶自己的識別碼，取代舊版的時間戳
+                   lastUpdatedBy: myClientId // 夾帶自己的識別碼
                };
                
                await setDoc(docRef, JSON.parse(JSON.stringify(stateToSave)), { merge: true });
                updateSyncStatus('synced');
            } catch (e) {
                console.error("Sync error", e);
-               if (e.message && e.message.includes('Missing or insufficient permissions')) {
-                   showToast('雲端儲存失敗：權限不足，請檢查 Firebase 設定', 'error');
-               }
                updateSyncStatus('error');
            }
        };
 
-       // 💡 如果是強制上傳 (初次備份舊資料)，則跳過 0.8 秒延遲，瞬間上傳
+       // 💡 將延遲大幅縮短至 10ms (原本 800ms)。解決手機新增資料後秒關螢幕或切換APP導致上傳失敗的痛點！
        if (forcePush) {
            executeUpload();
        } else {
-           syncDebounceTimer = setTimeout(executeUpload, 800);
+           syncDebounceTimer = setTimeout(executeUpload, 10);
        }
     };
 
     // --- 攔截 localStorage 自動觸發雲端同步 ---
     const originalSetItem = window.localStorage.setItem;
     window.localStorage.setItem = function(key, value) {
-        const oldValue = window.localStorage.getItem(key);
-        originalSetItem.apply(window.localStorage, arguments);
+        let oldValue = null;
+        try { oldValue = window.localStorage.getItem(key); } catch(e) {}
         
-        // 💡 阻擋不必要的重複上傳：只有資料真的有變才觸發，省流量且避免自己覆蓋自己
+        try { originalSetItem.apply(window.localStorage, arguments); } catch(e) { console.warn("Storage Error", e); }
+        
+        // 阻擋不必要的重複上傳：只有資料真的有變才觸發
         if (oldValue === value) return;
         
         // 如果是靜默寫入 (來自雲端下載的資料)，則不觸發上傳
-        if (window.localStorage.getItem('stockCalcLocalUI_PRO_Silent') === 'true') return;
+        let isSilent = false;
+        try { isSilent = window.localStorage.getItem('stockCalcLocalUI_PRO_Silent') === 'true'; } catch(e) {}
+        if (isSilent) return;
 
         if ([STORAGE_KEY_STATE, STORAGE_KEY_HISTORY, STORAGE_KEY_TICKERS, STORAGE_KEY_ALERTS].includes(key)) {
+            lastUserActionTime = Date.now(); // 💡 記錄使用者修改瞬間，觸發2秒無敵防呆鎖定
             if (typeof window.syncToCloud === 'function') window.syncToCloud();
         }
     };
