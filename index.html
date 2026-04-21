@@ -195,7 +195,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    // 💡 補回 signInWithCustomToken 核心認證模組
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -207,7 +208,7 @@
         appId: "1:651237908905:web:d29f5e0b6da78d14cb64b8"
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app = initializeApp(typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const appIdStr = typeof __app_id !== 'undefined' ? __app_id : 'stock-calculator-v1';
@@ -271,9 +272,34 @@
       tvchartContainer: document.getElementById('tvchart')
     };
 
-    // --- 🚀 終極同步邏輯：公共頻道模式 ---
+    // --- 🚀 終極同步邏輯：強制 Auth 認證 + 公共頻道模式 ---
+    const initAuth = async () => {
+      try {
+        // 💡 必須透過這段程式碼向 Firebase 提交系統的環境通行證，否則所有讀寫都會被伺服器阻擋
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) {
+        console.error("Auth Error:", error);
+        showToast('Firebase 登入失敗：請確認匿名登入已啟用', 'error');
+        updateSyncStatus('error');
+      }
+    };
+
+    // 監聽登入狀態，登入成功才啟動同步
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        initRealtimeSync();
+      } else {
+        currentUser = null;
+        updateSyncStatus('error');
+      }
+    });
+
     async function initRealtimeSync() {
-        await signInAnonymously(auth);
         const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'calculatorData', 'global_state');
         
         onSnapshot(docRef, (snap) => {
@@ -298,13 +324,15 @@
                 updateSyncStatus('synced');
             }
         }, (err) => {
-            console.error("Firestore Error:", err);
+            console.error("Firestore Listen Error:", err);
+            // 💡 若被 Firebase 規則阻擋，會直接在畫面彈出紅框警告
+            showToast('同步被 Firebase 拒絕：權限不足 (Rules)', 'error');
             updateSyncStatus('error');
         });
     }
 
     function pushToCloud() {
-        if (isApplyingCloudUpdate) return;
+        if (isApplyingCloudUpdate || !currentUser) return;
         updateSyncStatus('syncing');
         
         const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'calculatorData', 'global_state');
@@ -314,7 +342,13 @@
             updatedAt: Date.now()
         };
         
-        setDoc(docRef, stateToSave).then(() => updateSyncStatus('synced')).catch(() => updateSyncStatus('error'));
+        setDoc(docRef, stateToSave).then(() => {
+            updateSyncStatus('synced');
+        }).catch((err) => {
+            console.error("Sync Write Error:", err);
+            showToast('上傳被 Firebase 拒絕：' + err.message, 'error');
+            updateSyncStatus('error');
+        });
     }
 
     function updateSyncStatus(status) {
@@ -482,7 +516,9 @@
             priceAlerts = JSON.parse(localStorage.getItem(STORAGE_KEY_ALERTS)) || [];
             if(els.reportMonthPicker) els.reportMonthPicker.value = new Date().toISOString().slice(0, 7);
             commitToUI();
-            initRealtimeSync(); 
+            
+            // 💡 啟動驗證流程，不再直接調用 initRealtimeSync
+            initAuth(); 
         } catch(e) { console.error("Init Error", e); }
     });
 
