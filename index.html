@@ -88,12 +88,12 @@
       <div class="space-y-4">
         <div>
           <label class="block text-[11px] font-bold text-[#2979ff] mb-1">Finnhub API Key</label>
-          <div class="text-[9px] text-slate-500 mb-1.5">優點：每分鐘 60 次，適合每秒刷新。缺點：僅包含 BATS 交易所流動性。</div>
+          <div class="text-[9px] text-slate-500 mb-1.5">優點：每分鐘 60 次。缺點：僅包含 BATS 交易所流動性。</div>
           <input id="finnhubKeyInput" type="text" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
         </div>
         <div>
           <label class="block text-[11px] font-bold text-[#00e676] mb-1">Twelve Data API Key</label>
-          <div class="text-[9px] text-slate-500 mb-1.5">優點：全市場綜合報價，100% 精準。缺點：免費版每分鐘限 8 次。</div>
+          <div class="text-[9px] text-slate-500 mb-1.5">優點：全市場綜合報價。缺點：免費版每分鐘限 8 次。</div>
           <input id="twelveDataKeyInput" type="text" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#00e676] outline-none">
         </div>
       </div>
@@ -140,7 +140,7 @@
           </div>
           <div>
             <label class="block text-[11px] font-bold text-[#00e676] mb-1">賣出價</label>
-            <input type="number" step="any" id="mhSell" placeholder="選填" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
+            <input type="number" step="any" id="ehSell" placeholder="選填" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
           <div class="col-span-2">
             <label class="block text-[11px] font-bold text-[#ff5252] mb-1">手續費 / 稅金</label>
@@ -373,17 +373,33 @@
               </div>
             </div>
 
-            <div class="flex gap-2 mt-2">
-              <button type="button" id="btnAnalyzeVolToday" class="flex-1 bg-[#2a2a2a] hover:bg-[#333] border border-[#2979ff]/50 text-[#2979ff] text-[11px] font-bold py-1.5 rounded-lg transition-colors">
-                 📉 分析當日波動
+            <div class="flex flex-col gap-2 mt-2">
+              <button type="button" id="btnAnalyzeVolToday" class="w-full bg-[#2a2a2a] hover:bg-[#333] border border-[#2979ff]/50 text-[#2979ff] text-[11px] font-bold py-1.5 rounded-lg transition-colors">
+                 📉 分析當日波動 (5分K)
               </button>
-              <button type="button" id="btnAnalyzeVol30D" class="flex-1 bg-[#2a2a2a] hover:bg-[#333] border border-[#2979ff]/50 text-[#2979ff] text-[11px] font-bold py-1.5 rounded-lg transition-colors">
-                 📅 近30日分析
-              </button>
+              <div class="flex items-center bg-[#2a2a2a] border border-[#2979ff]/50 rounded-lg overflow-hidden transition-colors hover:bg-[#333]">
+                <input type="date" id="volStartDate" class="flex-1 bg-transparent text-white text-center font-bold outline-none text-[10px] py-1.5 px-0.5 border-r border-[#2979ff]/50 min-w-0" title="開始日期" />
+                <input type="date" id="volEndDate" class="flex-1 bg-transparent text-white text-center font-bold outline-none text-[10px] py-1.5 px-0.5 border-r border-[#2979ff]/50 min-w-0" title="結束日期" />
+                <button type="button" id="btnAnalyzeVolRange" class="flex-[1.2] text-[#2979ff] text-[11px] font-bold py-1.5 px-2 text-center h-full outline-none transition-colors min-w-0 whitespace-nowrap">
+                   📅 區間分析
+                </button>
+              </div>
             </div>
             
             <div id="volatilityResultTitle" class="text-[10px] text-center text-slate-400 mt-3 hidden font-bold tracking-widest">--- 分析結果 ---</div>
             <div id="volatilityResult" class="grid grid-cols-3 gap-2 mt-1 hidden">
+              <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center justify-center col-span-1">
+                <span class="text-[9px] text-slate-400 font-bold mb-1">最大單次升幅</span>
+                <span id="volMaxRise" class="text-xs font-bold text-[#00e676]">-</span>
+              </div>
+              <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center justify-center col-span-1">
+                <span class="text-[9px] text-slate-400 font-bold mb-1">最小單次升幅</span>
+                <span id="volMinRise" class="text-xs font-bold text-[#00e676]">-</span>
+              </div>
+              <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center justify-center col-span-1">
+                <span class="text-[9px] text-slate-400 font-bold mb-1">平均每次升幅</span>
+                <span id="volAvgRise" class="text-xs font-bold text-[#00e676]">-</span>
+              </div>
               <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center justify-center col-span-1">
                 <span class="text-[9px] text-slate-400 font-bold mb-1">最大單次跌幅</span>
                 <span id="volMaxDrop" class="text-xs font-bold text-[#ff5252]">-</span>
@@ -399,6 +415,10 @@
               <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center justify-center col-span-3">
                 <span class="text-[10px] text-slate-400 font-bold mb-0.5">平均所需反彈重回升勢</span>
                 <span id="volAvgRebound" class="text-sm font-bold text-[#00e676]">-</span>
+              </div>
+              <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center justify-center col-span-3">
+                <span class="text-[10px] text-slate-400 font-bold mb-0.5">平均所需回撤重回跌勢</span>
+                <span id="volAvgPullback" class="text-sm font-bold text-[#ff5252]">-</span>
               </div>
             </div>
           </div>
@@ -893,13 +913,19 @@
       volManualDrop: document.getElementById('volManualDrop'),
       volManualRise: document.getElementById('volManualRise'),
       btnAnalyzeVolToday: document.getElementById('btnAnalyzeVolToday'),
-      btnAnalyzeVol30D: document.getElementById('btnAnalyzeVol30D'),
+      volStartDate: document.getElementById('volStartDate'),
+      volEndDate: document.getElementById('volEndDate'),
+      btnAnalyzeVolRange: document.getElementById('btnAnalyzeVolRange'),
       volatilityResultTitle: document.getElementById('volatilityResultTitle'),
       volatilityResult: document.getElementById('volatilityResult'),
+      volMaxRise: document.getElementById('volMaxRise'),
+      volMinRise: document.getElementById('volMinRise'),
+      volAvgRise: document.getElementById('volAvgRise'),
       volMaxDrop: document.getElementById('volMaxDrop'),
       volMinDrop: document.getElementById('volMinDrop'),
       volAvgDrop: document.getElementById('volAvgDrop'),
       volAvgRebound: document.getElementById('volAvgRebound'),
+      volAvgPullback: document.getElementById('volAvgPullback'),
 
       // Display
       currentPriceDisp: document.getElementById('currentPriceDisp'),
@@ -1571,77 +1597,69 @@
       const symbol = els.tickerInput.value.toUpperCase().trim();
       if (!symbol) return showToast('請先在上方輸入或抓取股票代號', 'error');
 
-      const btn = mode === 'today' ? els.btnAnalyzeVolToday : els.btnAnalyzeVol30D;
+      const btn = mode === 'today' ? els.btnAnalyzeVolToday : els.btnAnalyzeVolRange;
       const originalText = btn.innerHTML;
       btn.innerHTML = '分析中...';
       btn.disabled = true;
 
-      const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
+      let startDate = '', endDate = '';
+      if (mode === 'range') {
+          startDate = els.volStartDate.value;
+          endDate = els.volEndDate.value;
+          if (!startDate || !endDate) {
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+              return showToast('請選擇完整的開始與結束日期', 'error');
+          }
+          if (new Date(startDate) > new Date(endDate)) {
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+              return showToast('開始日期不能晚於結束日期', 'error');
+          }
+      }
 
       try {
           let drops = [];
+          let rises = [];
           let prices = [];
 
-          if (source === 'finnhub') {
-              const to = Math.floor(Date.now() / 1000);
-              // 擴大搜索範圍到 4 天前，避免因為週末或連假導致 24 小時內沒有任何數據
-              const from = mode === 'today' ? to - (4 * 24 * 60 * 60) : to - (30 * 24 * 60 * 60);
-              // 1分K容易被免費版API限制，改為 5分K 較為穩定
-              const resolution = mode === 'today' ? '5' : 'D'; 
+          // 徹底移除下拉選單判斷，100% 強制使用 Twelve Data 提取精準數據
+          const interval = mode === 'today' ? '5min' : '1day';
+          let url = '';
+          if (mode === 'today') {
+              url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=390&apikey=${TWELVE_DATA_API_KEY}`;
+          } else {
+              url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&start_date=${startDate}&end_date=${endDate} 23:59:59&apikey=${TWELVE_DATA_API_KEY}`;
+          }
+          
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          if (data.code === 429) throw new Error('Twelve Data 頻率達免費上限');
+          if (data.code === 401) throw new Error('Twelve Data API Key 無效');
+          
+          if (data.values && data.values.length > 0) {
+              const sortedValues = data.values.reverse();
               
-              const res = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`);
-              const data = await res.json();
-              if (data.s === 'ok' && data.c && data.c.length > 0) {
-                  if (mode === 'today') {
-                      // 取出最後一個交易日的日期字串
-                      const lastTimestamp = data.t[data.t.length - 1];
-                      const lastDate = new Date(lastTimestamp * 1000).toDateString();
-                      
-                      // 只篩選出最後一個交易日的所有價格
-                      for(let i = 0; i < data.t.length; i++) {
-                          if (new Date(data.t[i] * 1000).toDateString() === lastDate) {
-                              prices.push(data.c[i]);
-                          }
-                      }
-                      // 如果過濾後為空 (防呆)，則使用全部
-                      if (prices.length === 0) prices = data.c;
-                  } else {
-                      prices = data.c;
-                      for (let i = 0; i < data.h.length; i++) {
-                          const h = data.h[i], l = data.l[i];
-                          if (h > 0 && h > l) drops.push(((h - l) / h) * 100);
+              if (mode === 'today') {
+                  const lastDateStr = sortedValues[sortedValues.length - 1].datetime.split(' ')[0];
+                  const todayValues = sortedValues.filter(v => v.datetime.startsWith(lastDateStr));
+                  prices = todayValues.map(v => parseFloat(v.close));
+              } else {
+                  prices = sortedValues.map(v => parseFloat(v.close));
+                  for (let i = 0; i < sortedValues.length; i++) {
+                      const h = parseFloat(sortedValues[i].high);
+                      const l = parseFloat(sortedValues[i].low);
+                      if (h > 0 && h > l) {
+                          drops.push(((h - l) / h) * 100);
+                          rises.push(((h - l) / l) * 100);
                       }
                   }
-              } else {
-                  throw new Error(data.s === 'no_data' ? '該時段無交易數據(可能為休市或API限制)' : '無法取得該代號歷史資料');
               }
           } else {
-              const interval = mode === 'today' ? '5min' : '1day';
-              const outputsize = mode === 'today' ? 390 : 30; 
-              const res = await fetch(`https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${outputsize}&apikey=${TWELVE_DATA_API_KEY}`);
-              const data = await res.json();
-              if (data.values && data.values.length > 0) {
-                  const sortedValues = data.values.reverse();
-                  
-                  if (mode === 'today') {
-                      // 取出最後一天的日期 (格式為 YYYY-MM-DD)
-                      const lastDateStr = sortedValues[sortedValues.length - 1].datetime.split(' ')[0];
-                      const todayValues = sortedValues.filter(v => v.datetime.startsWith(lastDateStr));
-                      prices = todayValues.map(v => parseFloat(v.close));
-                  } else {
-                      prices = sortedValues.map(v => parseFloat(v.close));
-                      for (let i = 0; i < sortedValues.length; i++) {
-                          const h = parseFloat(sortedValues[i].high);
-                          const l = parseFloat(sortedValues[i].low);
-                          if (h > 0 && h > l) drops.push(((h - l) / h) * 100);
-                      }
-                  }
-              } else {
-                  throw new Error(data.message || '無法取得全市場歷史資料');
-              }
+              throw new Error(data.message || '該區間無法取得歷史資料');
           }
 
-          // 針對「當日波動」使用 V 型轉折演算法
           if (mode === 'today' && prices.length > 0) {
               const threshold = 0.001; 
               let state = 'up';
@@ -1655,6 +1673,7 @@
                           peak = p;
                       } else if ((peak - p) / peak > threshold) {
                           state = 'down';
+                          if (trough > 0) rises.push(((peak - trough) / trough) * 100);
                           trough = p;
                       }
                   } else if (state === 'down') {
@@ -1662,35 +1681,50 @@
                           trough = p;
                       } else if ((p - trough) / trough > threshold) {
                           state = 'up';
-                          drops.push((peak - trough) / peak * 100);
+                          drops.push(((peak - trough) / peak) * 100);
                           peak = p;
                       }
                   }
               }
-              // 收尾：如果最後還在跌勢中且有一定跌幅，也算進去
               if (state === 'down' && peak > trough && ((peak - trough) / peak > threshold)) {
-                  drops.push((peak - trough) / peak * 100);
+                  drops.push(((peak - trough) / peak) * 100);
+              }
+              if (state === 'up' && peak > trough && ((peak - trough) / trough > threshold)) {
+                  rises.push(((peak - trough) / trough) * 100);
               }
           }
 
-          if (drops.length > 0) {
-              const maxDrop = Math.max(...drops);
-              const minDrop = Math.min(...drops);
-              const avgDrop = drops.reduce((a, b) => a + b, 0) / drops.length;
-              const avgRebound = (avgDrop / (100 - avgDrop)) * 100;
+          drops = drops.filter(d => d > 0);
+          rises = rises.filter(r => r > 0);
+
+          if (drops.length > 0 || rises.length > 0) {
+              const maxDrop = drops.length > 0 ? Math.max(...drops) : 0;
+              const minDrop = drops.length > 0 ? Math.min(...drops) : 0;
+              const avgDrop = drops.length > 0 ? drops.reduce((a, b) => a + b, 0) / drops.length : 0;
+              const avgRebound = avgDrop > 0 ? (avgDrop / (100 - avgDrop)) * 100 : 0;
+
+              const maxRise = rises.length > 0 ? Math.max(...rises) : 0;
+              const minRise = rises.length > 0 ? Math.min(...rises) : 0;
+              const avgRise = rises.length > 0 ? rises.reduce((a, b) => a + b, 0) / rises.length : 0;
+              const avgPullback = avgRise > 0 ? (avgRise / (100 + avgRise)) * 100 : 0;
 
               els.volMaxDrop.textContent = `-${formatNumber(maxDrop, 2)}%`;
               els.volMinDrop.textContent = `-${formatNumber(minDrop, 2)}%`;
               els.volAvgDrop.textContent = `-${formatNumber(avgDrop, 2)}%`;
               els.volAvgRebound.textContent = `+${formatNumber(avgRebound, 2)}%`;
               
+              els.volMaxRise.textContent = `+${formatNumber(maxRise, 2)}%`;
+              els.volMinRise.textContent = `+${formatNumber(minRise, 2)}%`;
+              els.volAvgRise.textContent = `+${formatNumber(avgRise, 2)}%`;
+              els.volAvgPullback.textContent = `-${formatNumber(avgPullback, 2)}%`;
+              
               if (els.volatilityResultTitle) {
-                  els.volatilityResultTitle.textContent = mode === 'today' ? '--- 當日內震盪分析 (多次V型回撤) ---' : '--- 近 30 日波動分析 (單日最大震盪) ---';
+                  els.volatilityResultTitle.textContent = mode === 'today' ? '--- 當日內震盪分析 (多次V型回撤) ---' : `--- ${startDate} 至 ${endDate} 波動分析 (單日最大震盪) ---`;
                   els.volatilityResultTitle.classList.remove('hidden');
               }
 
               els.volatilityResult.classList.remove('hidden');
-              showToast(mode === 'today' ? '✅ 當日波動分析完成' : '✅ 近30日分析完成', 'success');
+              showToast(mode === 'today' ? '✅ 當日波動分析完成' : '✅ 區間分析完成', 'success');
           } else {
               showToast('資料波動過小，無法找出明顯的轉折段', 'error');
               els.volatilityResult.classList.add('hidden');
@@ -1705,7 +1739,7 @@
     };
 
     if(els.btnAnalyzeVolToday) els.btnAnalyzeVolToday.addEventListener('click', () => analyzeVolatility('today'));
-    if(els.btnAnalyzeVol30D) els.btnAnalyzeVol30D.addEventListener('click', () => analyzeVolatility('30d'));
+    if(els.btnAnalyzeVolRange) els.btnAnalyzeVolRange.addEventListener('click', () => analyzeVolatility('range'));
 
     // --- 頁籤切換與日曆報表邏輯 ---
     window.switchRecordsTab = function(tab) {
@@ -2427,6 +2461,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      // 設定日期選擇器的預設值為「最近 30 天」
+      if(els.volStartDate && els.volEndDate) {
+        const now = new Date();
+        const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        els.volStartDate.value = past.toISOString().split('T')[0];
+        els.volEndDate.value = now.toISOString().split('T')[0];
+      }
+
       loadAndMigrateData();
       updateSoundUI(); 
       if(els.tickerInput && els.tickerInput.value) { 
