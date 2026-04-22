@@ -63,7 +63,7 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
   </style>
 </head>
-<body class="min-h-screen p-1.5 md:p-6">
+<body class="min-h-screen p-1.5 md:p-6 overflow-y-scroll">
 
   <!-- 浮動通知容器 (Toast) -->
   <div id="toastContainer" class="fixed top-5 right-5 z-[99999] flex flex-col gap-2 pointer-events-none"></div>
@@ -375,13 +375,13 @@
 
             <div class="flex flex-col gap-2 mt-2">
               <button type="button" id="btnAnalyzeVolToday" class="w-full bg-[#2a2a2a] hover:bg-[#333] border border-[#2979ff]/50 text-[#2979ff] text-[11px] font-bold py-1.5 rounded-lg transition-colors">
-                 📉 分析當日波動 (5分K)
+                  📉 分析當日波動 (5分K)
               </button>
               <div class="flex items-center bg-[#2a2a2a] border border-[#2979ff]/50 rounded-lg overflow-hidden transition-colors hover:bg-[#333]">
                 <input type="date" id="volStartDate" class="flex-1 bg-transparent text-white text-center font-bold outline-none text-[10px] py-1.5 px-0.5 border-r border-[#2979ff]/50 min-w-0" title="開始日期" />
                 <input type="date" id="volEndDate" class="flex-1 bg-transparent text-white text-center font-bold outline-none text-[10px] py-1.5 px-0.5 border-r border-[#2979ff]/50 min-w-0" title="結束日期" />
                 <button type="button" id="btnAnalyzeVolRange" class="flex-[1.2] text-[#2979ff] text-[11px] font-bold py-1.5 px-2 text-center h-full outline-none transition-colors min-w-0 whitespace-nowrap">
-                   📅 區間分析
+                    📅 區間分析
                 </button>
               </div>
             </div>
@@ -1157,7 +1157,7 @@
       const dateObj = new Date(dateVal);
       const timeStr = dateObj.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'});
       
-      const idStr = dateObj.getTime().toString() + Math.floor(Math.random()*1000).toString() + 'h';
+      const idStr = Date.now().toString() + 'm';
 
       tradeHistory.unshift({ 
         id: idStr, 
@@ -1174,6 +1174,7 @@
       tradeHistory.sort((a,b) => {
         let timeA = a.dateStr ? new Date(a.dateStr).getTime() : parseInt(a.id);
         let timeB = b.dateStr ? new Date(b.dateStr).getTime() : parseInt(b.id);
+        if (timeA === timeB) return parseInt(b.id) - parseInt(a.id);
         return timeB - timeA; 
       });
 
@@ -1235,6 +1236,7 @@
       tradeHistory.sort((a,b) => {
         let timeA = a.dateStr ? new Date(a.dateStr).getTime() : parseInt(a.id);
         let timeB = b.dateStr ? new Date(b.dateStr).getTime() : parseInt(b.id);
+        if (timeA === timeB) return parseInt(b.id) - parseInt(a.id);
         return timeB - timeA; 
       });
 
@@ -1355,6 +1357,7 @@
     }
 
     const svgIconTrash = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+    const svgIconSettings = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
 
     // --- 資料加載與自動遷移邏輯 ---
     function loadAndMigrateData() {
@@ -1815,7 +1818,7 @@
         }
 
         const fee = parseFloat(r.fee) || 0;
-        const pnl = (sPrice - r.price) * r.quantity - fee;
+        const pnl = (r.direction === 'short' ? (r.price - sPrice) : (sPrice - r.price)) * r.quantity - fee;
         
         grandTotal += pnl;
 
@@ -1928,7 +1931,7 @@
 
         const fee = parseFloat(r.fee) || 0;
         
-        const pnl = (sPrice - r.price) * r.quantity - fee;
+        const pnl = (r.direction === 'short' ? (r.price - sPrice) : (sPrice - r.price)) * r.quantity - fee;
 
         if (!aggregated[r.ticker]) aggregated[r.ticker] = 0;
         aggregated[r.ticker] += pnl;
@@ -2444,7 +2447,7 @@
           
           if (!isNaN(sPrice)) {
             const fee = parseFloat(r.fee) || 0;
-            const pnl = (sPrice - r.price) * r.quantity - fee;
+            const pnl = (isShort ? (r.price - sPrice) : (sPrice - r.price)) * r.quantity - fee;
             const pnlPct = (pnl / (r.price * r.quantity)) * 100;
             const color = pnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
             const sign = pnl > 0 ? '+' : '';
