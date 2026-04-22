@@ -657,6 +657,25 @@
       return `${year}-${month}-${day}`;
     }
 
+    // --- 同步舊資料的底層日期與 UI 顯示日期，解決 UTC 落差 ---
+    function syncDateStrWithTime(list) {
+      list.forEach(r => {
+        if (r.dateStr && r.time) {
+          const match = r.time.match(/(\d+)[/月](\d+)/);
+          if (match) {
+            const m = parseInt(match[1], 10);
+            const d = parseInt(match[2], 10);
+            const parts = r.dateStr.split('-');
+            if (parts.length === 3) {
+                if (parseInt(parts[1], 10) !== m || parseInt(parts[2], 10) !== d) {
+                  r.dateStr = `${parts[0]}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                }
+            }
+          }
+        }
+      });
+    }
+
     let firebaseConfig;
     try {
       firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
@@ -742,6 +761,10 @@
 
                records = data.records || [];
                tradeHistory = data.tradeHistory || [];
+               
+               // 自動校正 Firebase 傳來的舊資料
+               if (tradeHistory.length > 0) syncDateStrWithTime(tradeHistory);
+               
                savedTickers = data.savedTickers || [];
                priceAlerts = data.priceAlerts || [];
                
@@ -763,6 +786,11 @@
     }
 
     window.commitDataChange = function(isFromCloud = false) {
+      // 在寫入儲存之前，確保所有歷史紀錄的日期與UI顯示同步
+      if (tradeHistory && tradeHistory.length > 0) {
+          syncDateStrWithTime(tradeHistory);
+      }
+
       totalShares = records.reduce((s, r) => s + r.quantity, 0);
       totalCost = records.reduce((s, r) => s + r.cost, 0);
       averagePrice = totalShares > 0 ? totalCost / totalShares : 0;
@@ -1401,6 +1429,8 @@
       }
       
       tradeHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY)) || [];
+      if (tradeHistory.length > 0) syncDateStrWithTime(tradeHistory);
+
       if(els.chartIntervalSelect) els.chartIntervalSelect.value = currentChartInterval;
       
       commitDataChange(true); 
