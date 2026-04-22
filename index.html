@@ -778,11 +778,14 @@
       }
 
       calculatePnl();
-      renderTable();
-      updateCurrentPriceColor();
-      renderHistoryTable();
-      if(activeRecordsTab === 'report') renderReport();
-      if(activeRecordsTab === 'details') renderDetails();
+      updateCurrentPriceColor(false); 
+
+      // 🚀 效能優化：只渲染「當前正在看」的那個分頁，隱藏的分頁不消耗效能
+      if (activeRecordsTab === 'current') renderTable();
+      else if (activeRecordsTab === 'history') renderHistoryTable();
+      else if (activeRecordsTab === 'report') renderReport();
+      else if (activeRecordsTab === 'details') renderDetails();
+
       renderAlerts();
       renderTickerDropdown();
 
@@ -1352,7 +1355,6 @@
     }
 
     const svgIconTrash = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
-    const svgIconSettings = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
 
     // --- 資料加載與自動遷移邏輯 ---
     function loadAndMigrateData() {
@@ -1530,7 +1532,7 @@
               sendBrowserNotification('🚨 價位觸發！', msg);
               playAlertSound();
               if (a.type === 'once') {
-                a.isActive = false; 
+                a._markedForDeletion = true; // 🚀 效能優化：標記為準備刪除，節省資料庫空間
               } else {
                 a.isTriggered = true; 
               }
@@ -1544,7 +1546,7 @@
               sendBrowserNotification('📉 價位觸發！', msg);
               playAlertSound();
               if (a.type === 'once') {
-                a.isActive = false;
+                a._markedForDeletion = true; // 🚀 效能優化：標記為準備刪除
               } else {
                 a.isTriggered = true;
               }
@@ -1561,6 +1563,9 @@
       });
       
       if (needsUpdate) {
+        // 🚀 執行刪除已失效的單次提醒
+        priceAlerts = priceAlerts.filter(a => !a._markedForDeletion);
+        
         if (triggeredAlertId) {
           currentHighlightedAlertId = triggeredAlertId;
           if (highlightTimeout) clearTimeout(highlightTimeout);
@@ -1623,7 +1628,6 @@
           let rises = [];
           let prices = [];
 
-          // 徹底移除下拉選單判斷，100% 強制使用 Twelve Data 提取精準數據
           const interval = mode === 'today' ? '5min' : '1day';
           let url = '';
           if (mode === 'today') {
@@ -1757,6 +1761,9 @@
       
       if(els.historyActions) els.historyActions.classList.toggle('hidden', tab !== 'history');
 
+      // 🚀 效能優化：切換到該分頁時，才執行重繪
+      if(tab === 'current') renderTable();
+      if(tab === 'history') renderHistoryTable();
       if(tab === 'report') renderReport();
       if(tab === 'details') renderDetails();
     };
@@ -2066,7 +2073,8 @@
           const data = await res.json();
           if (data && data.c) { 
             if(els.currentPriceDisp) els.currentPriceDisp.value = data.c; 
-            updateCurrentPriceColor(); checkPriceAlerts(symbol, data.c); 
+            updateCurrentPriceColor(true); 
+            checkPriceAlerts(symbol, data.c); 
             saveUIStateLocal();
             updateLastFetchTime(data.t);
           }
@@ -2079,7 +2087,8 @@
           if (data && data.price) {
             const price = parseFloat(data.price);
             if(els.currentPriceDisp) els.currentPriceDisp.value = price;
-            updateCurrentPriceColor(); checkPriceAlerts(symbol, price); 
+            updateCurrentPriceColor(true); 
+            checkPriceAlerts(symbol, price); 
             saveUIStateLocal();
             updateLastFetchTime();
           } else {
@@ -2110,7 +2119,9 @@
           const data = await res.json();
           if (data && data.c) { 
             if (els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== data.c) {
-              els.currentPriceDisp.value = data.c; updateCurrentPriceColor(); checkPriceAlerts(symbol, data.c);
+              els.currentPriceDisp.value = data.c; 
+              updateCurrentPriceColor(true); 
+              checkPriceAlerts(symbol, data.c);
             }
             updateLastFetchTime(data.t);
             saveUIStateLocal();
@@ -2126,7 +2137,9 @@
            if (data && data.price) {
               const price = parseFloat(data.price);
               if (els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== price) {
-                els.currentPriceDisp.value = price; updateCurrentPriceColor(); checkPriceAlerts(symbol, price);
+                els.currentPriceDisp.value = price; 
+                updateCurrentPriceColor(true); 
+                checkPriceAlerts(symbol, price);
               }
               updateLastFetchTime();
               saveUIStateLocal();
@@ -2252,13 +2265,13 @@
       if(els[id]) els[id].addEventListener('input', calculateSingleTrade);
     });
 
-    function updateCurrentPriceColor() {
+    function updateCurrentPriceColor(shouldRenderTable = true) {
       if(!els.currentPriceDisp) return;
       const v = parseFloat(els.currentPriceDisp.value);
       if (isNaN(v)) { 
         if(els.currentPnlAmountDisp) els.currentPnlAmountDisp.textContent = '-'; 
         if(els.currentPnlPercentDisp) els.currentPnlPercentDisp.textContent = '-'; 
-        renderTable(); 
+        if (shouldRenderTable && activeRecordsTab === 'current') renderTable(); 
         return; 
       }
       const c = (averagePrice > 0 && v > averagePrice) ? '#00e676' : (averagePrice > 0 && v < averagePrice) ? '#ff5252' : '#fff';
@@ -2271,11 +2284,14 @@
         const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
         if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = color; els.currentPnlAmountDisp.textContent = (totalPnl > 0 ? '+' : '') + formatNumber(totalPnl); }
         if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/totalCost)*100) + '%'; }
+      } else {
+        if(els.currentPnlAmountDisp) els.currentPnlAmountDisp.textContent = '-'; 
+        if(els.currentPnlPercentDisp) els.currentPnlPercentDisp.textContent = '-'; 
       }
-      renderTable(); 
+      if (shouldRenderTable && activeRecordsTab === 'current') renderTable(); 
     }
 
-    if(els.currentPriceDisp) els.currentPriceDisp.addEventListener('input', updateCurrentPriceColor);
+    if(els.currentPriceDisp) els.currentPriceDisp.addEventListener('input', () => updateCurrentPriceColor(true));
 
     if(els.addForm) {
       els.addForm.addEventListener('submit', (e) => {
@@ -2396,7 +2412,11 @@
         let currentMonthStr = '';
         let htmlStr = '';
 
-        filteredHistory.forEach((r, index) => {
+        // 🚀 效能與記憶體優化：DOM 渲染截斷 (避免歷史紀錄過多時卡頓)
+        const maxRenderLimit = 50; 
+        const displayHistory = filteredHistory.slice(0, maxRenderLimit);
+
+        displayHistory.forEach((r, index) => {
           let recordDate;
           if (r.dateStr) {
             recordDate = new Date(r.dateStr);
@@ -2455,6 +2475,17 @@
             </td>
           </tr>`;
         });
+        
+        // 如果歷史紀錄超過顯示上限，在表格底部加上提示
+        if (filteredHistory.length > maxRenderLimit) {
+           htmlStr += `
+            <tr>
+              <td colspan="8" class="text-center py-3 text-[10px] text-slate-500 bg-[#1e1e1e]/50 border-t border-[#333]">
+                僅顯示最近 ${maxRenderLimit} 筆紀錄以節省效能，若要查看更早的紀錄請使用搜尋功能。
+              </td>
+            </tr>
+           `;
+        }
         
         els.historyTableBody.innerHTML = htmlStr;
       }
