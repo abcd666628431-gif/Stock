@@ -649,6 +649,14 @@
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // --- 取得本地時間 YYYY-MM-DD 的專用涵式 (修復 UTC 時差 Bug) ---
+    function getLocalDateString(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
     let firebaseConfig;
     try {
       firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
@@ -1076,7 +1084,7 @@
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
         const downloadNode = document.createElement('a');
         downloadNode.setAttribute("href", dataStr);
-        const dateStr = new Date().toISOString().split('T')[0];
+        const dateStr = getLocalDateString();
         downloadNode.setAttribute("download", `股票計算器備份_${dateStr}.json`);
         document.body.appendChild(downloadNode);
         downloadNode.click();
@@ -1134,7 +1142,7 @@
     window.openManualHistoryModal = function() {
       document.getElementById('manualHistoryModal').classList.remove('hidden');
       document.getElementById('manualHistoryModal').classList.add('flex');
-      document.getElementById('mhDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('mhDate').value = getLocalDateString();
     };
 
     window.closeManualHistoryModal = function() {
@@ -1191,7 +1199,7 @@
       if (!rec) return;
 
       document.getElementById('ehId').value = rec.id;
-      document.getElementById('ehDate').value = rec.dateStr || new Date().toISOString().split('T')[0];
+      document.getElementById('ehDate').value = rec.dateStr || getLocalDateString();
       document.getElementById('ehSymbol').value = rec.ticker;
       document.getElementById('ehQty').value = rec.quantity;
       document.getElementById('ehBuy').value = rec.price;
@@ -1811,7 +1819,8 @@
 
         let recordDate;
         if (r.dateStr) {
-          recordDate = new Date(r.dateStr);
+          const parts = r.dateStr.split('-');
+          recordDate = new Date(parts[0], parts[1] - 1, parts[2]);
         } else {
           const ts = parseInt(r.id);
           recordDate = ts ? new Date(ts) : new Date();
@@ -2315,7 +2324,7 @@
         tradeHistory.unshift({ 
           id: Date.now().toString()+'h', 
           time: timeStr, 
-          dateStr: now.toISOString().split('T')[0], 
+          dateStr: getLocalDateString(now), 
           ticker: s, price: p, quantity: q, direction: dir 
         });
         
@@ -2377,8 +2386,8 @@
         const newBadge = index === 0 ? '<span class="ml-1 md:ml-2 text-[#ff5252] text-[8px] md:text-[9px] font-black italic tracking-wider animate-pulse drop-shadow-[0_0_5px_rgba(255,82,82,0.8)]">NEW</span>' : '';
         
         if (!isNaN(currentPrice)) {
-          const rowPnl = (currentPrice - r.price) * r.quantity;
-          const rowPnlPct = ((currentPrice - r.price) / r.price) * 100;
+          const rowPnl = (isShort ? (r.price - currentPrice) : (currentPrice - r.price)) * r.quantity;
+          const rowPnlPct = ((isShort ? (r.price - currentPrice) : (currentPrice - r.price)) / r.price) * 100;
           const color = rowPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
           const sign = rowPnl > 0 ? '+' : '';
           pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold text-[10px] md:text-sm ${color}">${sign}${formatNumber(rowPnl)} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${sign}${formatNumber(rowPnlPct)}%)</span></td>`;
@@ -2422,7 +2431,8 @@
         displayHistory.forEach((r, index) => {
           let recordDate;
           if (r.dateStr) {
-            recordDate = new Date(r.dateStr);
+            const parts = r.dateStr.split('-');
+            recordDate = new Date(parts[0], parts[1] - 1, parts[2]);
           } else {
             const ts = parseInt(r.id);
             recordDate = ts ? new Date(ts) : new Date();
@@ -2499,8 +2509,8 @@
       if(els.volStartDate && els.volEndDate) {
         const now = new Date();
         const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        els.volStartDate.value = past.toISOString().split('T')[0];
-        els.volEndDate.value = now.toISOString().split('T')[0];
+        els.volStartDate.value = getLocalDateString(past);
+        els.volEndDate.value = getLocalDateString(now);
       }
 
       loadAndMigrateData();
