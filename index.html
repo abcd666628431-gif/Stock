@@ -773,7 +773,7 @@
     let currentUser = null;
     let unsubscribeSnapshot = null;
     let cloudSyncTimestamp = 0; // 雲端時間戳，用來防回音
-    let isFirebaseReady = false; // 🌟 關鍵同步鎖：防止剛連線時用本地舊資料覆蓋雲端
+    let hasSyncedWithServer = false; // 🌟 嚴格雲端同步鎖：確保收到伺服器最新資料前，禁止上傳
 
     const syncStatusEl = document.getElementById('cloudSyncStatus');
     function updateSyncStatus(status) {
@@ -819,17 +819,26 @@
        if (unsubscribeSnapshot) unsubscribeSnapshot();
 
        const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'shared', 'globalState');
-       unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
-           isFirebaseReady = true; // 🌟 解鎖：已成功連線並取得雲端最新狀態
+       
+       // 加入 includeMetadataChanges: true，讓我們能監聽資料是來自快取還是伺服器
+       unsubscribeSnapshot = onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
+           
+           // 🌟 終極防護：Firebase 剛連線時會先丟出「本地的舊快取」。
+           // 我們必須檢查 fromCache，如果為 false 代表這份資料「真正來自伺服器」，此時才解鎖上傳權限！
+           if (!docSnap.metadata.fromCache) {
+               hasSyncedWithServer = true; 
+           }
 
            if (docSnap.exists()) {
                const data = docSnap.data();
                
                // 忽略自己上傳的迴音
-               if (data.updatedAt && data.updatedAt <= cloudSyncTimestamp) return;
+               if (data.updatedAt && data.updatedAt <= cloudSyncTimestamp) {
+                   if (hasSyncedWithServer) updateSyncStatus('synced');
+                   return;
+               }
 
-               // 【修復記錄倒退 BUG】: 移除危險的本地時間比對，一律以雲端為唯一真理 (Source of Truth)。
-               // 這樣手機從背景喚醒時，會強制更新為雲端的最新資料，再也不會拿本地舊緩存去覆蓋資料庫！
+               // 接收到更新的資料
                cloudSyncTimestamp = data.updatedAt || Date.now();
 
                records = data.records || [];
@@ -842,12 +851,15 @@
                priceAlerts = data.priceAlerts || [];
                
                commitDataChange(true);
-               updateSyncStatus('synced');
+               
+               if (hasSyncedWithServer) updateSyncStatus('synced');
            } else {
-               if (records.length > 0 || tradeHistory.length > 0 || savedTickers.length > 0) {
-                   pushDataToCloud();
-               } else {
-                   updateSyncStatus('synced');
+               if (hasSyncedWithServer) {
+                   if (records.length > 0 || tradeHistory.length > 0 || savedTickers.length > 0) {
+                       pushDataToCloud();
+                   } else {
+                       updateSyncStatus('synced');
+                   }
                }
            }
        }, (err) => {
@@ -904,8 +916,9 @@
     };
 
     window.pushDataToCloud = function() {
-       // 🌟 關鍵修復：在收到第一次雲端資料前，絕對禁止上傳！這能防止手機背景自動刷新時把舊紀錄傳上雲端
-       if (!currentUser || !isFirebaseReady) return; 
+       // 🌟 終極防護：如果還沒收到「伺服器端」確認的最新資料，絕對禁止任何本地上傳行為！
+       // 徹底解決手機端背景刷新把舊快取傳上雲端的覆蓋災情。
+       if (!currentUser || !hasSyncedWithServer) return; 
        
        updateSyncStatus('syncing');
        
