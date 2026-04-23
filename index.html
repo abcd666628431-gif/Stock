@@ -69,8 +69,8 @@
   <div id="toastContainer" class="fixed top-5 right-5 z-[99999] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- 自訂彈窗 (Modal) -->
-  <div id="universalModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
+  <div id="universalModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-[#1e1e1e] border border-[#333] p-5 md:p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-auto max-h-[85vh] overflow-y-auto custom-scrollbar transform transition-all">
       <h3 id="uModalTitle" class="text-white font-bold mb-3 text-lg flex items-center">系統提示</h3>
       <p id="uModalText" class="text-slate-300 text-sm mb-5 break-words"></p>
       <input id="uModalInput" type="text" class="hidden w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white mb-5 focus:border-[#2979ff] outline-none">
@@ -82,8 +82,8 @@
   </div>
 
   <!-- API 設置專用 Modal -->
-  <div id="apiSettingsModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+  <div id="apiSettingsModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-[#1e1e1e] border border-[#333] p-5 md:p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-auto max-h-[85vh] overflow-y-auto custom-scrollbar">
       <h3 class="text-white font-bold mb-4 text-lg">🔑 報價 API 設置</h3>
       <div class="space-y-4">
         <div>
@@ -105,9 +105,9 @@
   </div>
 
   <!-- 手動加入歷史紀錄 Modal -->
-  <div id="manualHistoryModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
-      <h3 class="text-white font-bold mb-4 text-lg">➕ 手動加入歷史紀錄</h3>
+  <div id="manualHistoryModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-[#1e1e1e] border border-[#333] p-5 md:p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-auto max-h-[85vh] overflow-y-auto custom-scrollbar">
+      <h3 class="text-white font-bold mb-4 text-lg shrink-0">➕ 手動加入歷史紀錄</h3>
       <form id="manualHistoryForm" class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
           <div class="col-span-2">
@@ -147,7 +147,7 @@
             <input type="number" step="any" id="mhFee" placeholder="選填，預設為 0" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
           </div>
         </div>
-        <div class="flex justify-end space-x-3 mt-6">
+        <div class="flex justify-end space-x-3 mt-6 pt-2">
           <button type="button" onclick="closeManualHistoryModal()" class="px-4 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-white hover:bg-[#333] transition-colors">取消</button>
           <button type="submit" class="px-4 py-2 rounded-lg text-sm font-bold bg-[#2979ff] hover:bg-[#1c54b2] text-white transition-colors">加入紀錄</button>
         </div>
@@ -156,9 +156,9 @@
   </div>
 
   <!-- 修改歷史紀錄 Modal -->
-  <div id="editHistoryModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
-      <h3 class="text-white font-bold mb-4 text-lg">⚙️ 編輯歷史紀錄</h3>
+  <div id="editHistoryModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-[#1e1e1e] border border-[#333] p-5 md:p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-auto max-h-[85vh] overflow-y-auto custom-scrollbar">
+      <h3 class="text-white font-bold mb-4 text-lg shrink-0">⚙️ 編輯歷史紀錄</h3>
       <form id="editHistoryForm" class="space-y-3">
         <input type="hidden" id="ehId">
         <div class="grid grid-cols-2 gap-3">
@@ -309,6 +309,9 @@
                 <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">價位</label>
                 <input id="priceInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required>
               </div>
+            </div>
+            <div id="previewAvgCostContainer" class="hidden text-[11px] text-slate-300 bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444] text-center transition-all shadow-inner">
+              預計新平均成本: <span id="previewAvgCost" class="font-bold text-[#00e676] ml-1">-</span>
             </div>
             <button type="submit" class="w-full bg-[#2979ff] hover:bg-[#1c54b2] text-white text-xs md:text-sm font-bold py-1.5 md:py-2 rounded-lg transition-colors shadow-lg">
               加入計算模型
@@ -770,6 +773,7 @@
     let currentUser = null;
     let unsubscribeSnapshot = null;
     let cloudSyncTimestamp = 0; // 雲端時間戳，用來防回音
+    let isFirebaseReady = false; // 🌟 關鍵同步鎖：防止剛連線時用本地舊資料覆蓋雲端
 
     const syncStatusEl = document.getElementById('cloudSyncStatus');
     function updateSyncStatus(status) {
@@ -816,17 +820,16 @@
 
        const docRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'shared', 'globalState');
        unsubscribeSnapshot = onSnapshot(docRef, (docSnap) => {
+           isFirebaseReady = true; // 🌟 解鎖：已成功連線並取得雲端最新狀態
+
            if (docSnap.exists()) {
                const data = docSnap.data();
                
+               // 忽略自己上傳的迴音
                if (data.updatedAt && data.updatedAt <= cloudSyncTimestamp) return;
 
-               const localSavedTime = parseInt(localStorage.getItem('stockCalcLastLocalUpdate_PRO') || '0');
-               if (localSavedTime > (data.updatedAt + 5000)) {
-                   pushDataToCloud();
-                   return; 
-               }
-
+               // 【修復記錄倒退 BUG】: 移除危險的本地時間比對，一律以雲端為唯一真理 (Source of Truth)。
+               // 這樣手機從背景喚醒時，會強制更新為雲端的最新資料，再也不會拿本地舊緩存去覆蓋資料庫！
                cloudSyncTimestamp = data.updatedAt || Date.now();
 
                records = data.records || [];
@@ -901,7 +904,9 @@
     };
 
     window.pushDataToCloud = function() {
-       if (!currentUser) return;
+       // 🌟 關鍵修復：在收到第一次雲端資料前，絕對禁止上傳！這能防止手機背景自動刷新時把舊紀錄傳上雲端
+       if (!currentUser || !isFirebaseReady) return; 
+       
        updateSyncStatus('syncing');
        
        cloudSyncTimestamp = Date.now();
@@ -989,6 +994,8 @@
       qtyInput: document.getElementById('qtyInput'),
       priceInput: document.getElementById('priceInput'),
       addForm: document.getElementById('addForm'),
+      previewAvgCostContainer: document.getElementById('previewAvgCostContainer'),
+      previewAvgCost: document.getElementById('previewAvgCost'),
       
       // Calculators
       targetPriceInput: document.getElementById('targetPriceInput'),
@@ -2637,6 +2644,29 @@
 
     if(els.currentPriceDisp) els.currentPriceDisp.addEventListener('input', () => updateCurrentPriceColor(true));
 
+    function updatePreviewAvgCost() {
+      if(!els.qtyInput || !els.priceInput || !els.previewAvgCostContainer || !els.previewAvgCost) return;
+      const q = parseFloat(els.qtyInput.value);
+      const p = parseFloat(els.priceInput.value);
+      
+      if (!isNaN(q) && q > 0 && !isNaN(p) && p > 0) {
+        const currentTotalShares = records.reduce((s, r) => s + r.quantity, 0);
+        const currentTotalCost = records.reduce((s, r) => s + r.cost, 0);
+        
+        const newTotalShares = currentTotalShares + q;
+        const newTotalCost = currentTotalCost + (p * q);
+        const newAvg = newTotalShares > 0 ? newTotalCost / newTotalShares : 0;
+        
+        els.previewAvgCost.textContent = formatNumber(newAvg, 4);
+        els.previewAvgCostContainer.classList.remove('hidden');
+      } else {
+        els.previewAvgCostContainer.classList.add('hidden');
+      }
+    }
+
+    if(els.qtyInput) els.qtyInput.addEventListener('input', updatePreviewAvgCost);
+    if(els.priceInput) els.priceInput.addEventListener('input', updatePreviewAvgCost);
+
     if(els.addForm) {
       els.addForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -2662,6 +2692,7 @@
         
         if (tradeHistory.length > 200) tradeHistory.pop();
         els.priceInput.value = ''; els.qtyInput.value = ''; 
+        if(els.previewAvgCostContainer) els.previewAvgCostContainer.classList.add('hidden');
         
         commitDataChange(); 
         showToast('紀錄已新增', 'success');
