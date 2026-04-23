@@ -225,7 +225,7 @@
           <h1 class="text-sm md:text-2xl font-bold text-white tracking-tight flex items-center flex-wrap">
             股票倉位與即時圖表計算器 
             <span class="text-[9px] md:text-xs font-normal text-[#2979ff] bg-[#2979ff]/10 px-1 md:px-2 py-0.5 rounded border border-[#2979ff]/30 ml-2">PRO</span>
-            <span id="cloudSyncStatus" class="text-[9px] md:text-[10px] text-slate-500 ml-2">☁️ 未連線</span>
+            <span id="cloudSyncStatus" onclick="diagnoseFirebase()" class="text-[9px] md:text-[10px] text-slate-500 ml-2 cursor-pointer hover:text-white transition-colors" title="點擊測試連線與資料庫權限">☁️ 未連線</span>
           </h1>
         </div>
       </div>
@@ -775,18 +775,44 @@
     let cloudSyncTimestamp = 0; // 雲端時間戳，用來防回音
     let hasSyncedWithServer = false; // 🌟 嚴格雲端同步鎖：確保收到伺服器最新資料前，禁止上傳
 
+    // 🌟 新增：Firebase 連線與權限診斷工具
+    window.diagnoseFirebase = async function() {
+        showToast('正在測試 Firebase 資料庫讀寫權限...', 'info');
+        if (!currentUser) {
+            return showModal({ title: '連線診斷', text: '尚未取得連線憑證 (currentUser is null)。請檢查網路或專案設定。' });
+        }
+        try {
+            const testDocRef = doc(db, 'artifacts', appIdStr, 'public', 'data', 'shared', 'diagnostic_ping');
+            await setDoc(testDocRef, { ping: Date.now() });
+            showModal({ 
+                title: '✅ 連線診斷成功', 
+                text: '寫入權限完全正常！<br>Firebase 數據庫的規則 (Rules) 沒有問題。' 
+            });
+            updateSyncStatus('synced');
+        } catch(e) {
+            showModal({ 
+                title: '❌ 連線診斷失敗', 
+                text: `<b>錯誤代碼:</b> <span class="text-rose-500 font-mono">${e.code}</span><br>
+                       <b>錯誤訊息:</b> <span class="text-xs text-slate-400 break-all">${e.message}</span><br><br>
+                       這通常代表您的 <b>Firebase Firestore 規則 (Rules)</b> 權限不足，拒絕了寫入請求。<br><br>
+                       請至 Firebase 控制台修改 Rules 以供測試。` 
+            });
+            updateSyncStatus('error');
+        }
+    };
+
     const syncStatusEl = document.getElementById('cloudSyncStatus');
     function updateSyncStatus(status) {
       if(!syncStatusEl) return;
       if(status === 'syncing') {
           syncStatusEl.innerHTML = `☁️ 同步中...`;
-          syncStatusEl.className = 'text-[10px] text-amber-400 ml-3 animate-pulse';
+          syncStatusEl.className = 'text-[10px] text-amber-400 ml-3 animate-pulse cursor-pointer hover:text-white transition-colors';
       } else if (status === 'synced') {
           syncStatusEl.innerHTML = `☁️ 即時連線`;
-          syncStatusEl.className = 'text-[10px] text-[#00e676] ml-3';
+          syncStatusEl.className = 'text-[10px] text-[#00e676] ml-3 cursor-pointer hover:text-white transition-colors';
       } else if (status === 'error') {
-          syncStatusEl.innerHTML = `☁️ 離線模式`;
-          syncStatusEl.className = 'text-[10px] text-slate-500 ml-3';
+          syncStatusEl.innerHTML = `☁️ 權限錯誤`;
+          syncStatusEl.className = 'text-[10px] text-rose-500 ml-3 cursor-pointer hover:text-white transition-colors';
       }
     }
 
@@ -1239,32 +1265,57 @@
         showModal({
           type: 'confirm',
           title: '📥 導入資料確認',
-          text: '警告：導入資料將會「完全覆蓋」當前所有的紀錄、API Keys 與設定檔！<br><br>確定要繼續嗎？',
+          text: '警告：導入資料將會「完全覆蓋」當前雲端與本地的紀錄、API Keys 與設定檔！<br><br>確定要繼續嗎？',
           onConfirm: () => {
             const reader = new FileReader();
             reader.onload = function(evt) {
               try {
                 const importedObj = JSON.parse(evt.target.result);
                 
-                ['state', 'history', 'tickers', 'interval', 'finnhub', 'twelvedata', 'alerts', 'volume', 'customSound'].forEach(key => {
-                  let storageKey;
-                  if(key === 'state') storageKey = STORAGE_KEY_STATE;
-                  else if(key === 'history') storageKey = STORAGE_KEY_HISTORY;
-                  else if(key === 'tickers') storageKey = STORAGE_KEY_TICKERS;
-                  else if(key === 'interval') storageKey = STORAGE_KEY_INTERVAL;
-                  else if(key === 'finnhub') storageKey = STORAGE_KEY_FINNHUB;
-                  else if(key === 'twelvedata') storageKey = STORAGE_KEY_TWELVEDATA;
-                  else if(key === 'alerts') storageKey = STORAGE_KEY_ALERTS;
-                  else if(key === 'volume') storageKey = 'stockCalcVolume_PRO';
-                  else if(key === 'customSound') storageKey = 'stockCalcCustomSound_PRO';
-                  
-                  if (importedObj[key] !== undefined && importedObj[key] !== null) {
-                    localStorage.setItem(storageKey, importedObj[key]);
-                  }
-                });
+                // 1. 動態熱重載：直接寫入當前記憶體變數，不再重新整理網頁
+                if (importedObj.state) {
+                  const stateData = JSON.parse(importedObj.state);
+                  records = stateData.records || [];
+                  if (els.tickerInput) els.tickerInput.value = stateData.ticker || '';
+                }
+                if (importedObj.history) tradeHistory = JSON.parse(importedObj.history);
+                if (importedObj.tickers) savedTickers = JSON.parse(importedObj.tickers);
+                if (importedObj.alerts) priceAlerts = JSON.parse(importedObj.alerts);
                 
-                showToast('🚀 資料已成功導入，系統即將重新載入...', 'success');
-                setTimeout(() => window.location.reload(), 1500);
+                // 2. 更新設定與 API keys
+                if (importedObj.interval) {
+                  currentChartInterval = importedObj.interval;
+                  if(els.chartIntervalSelect) els.chartIntervalSelect.value = currentChartInterval;
+                  localStorage.setItem(STORAGE_KEY_INTERVAL, currentChartInterval);
+                }
+                if (importedObj.finnhub) {
+                  FINNHUB_API_KEY = importedObj.finnhub;
+                  localStorage.setItem(STORAGE_KEY_FINNHUB, FINNHUB_API_KEY);
+                }
+                if (importedObj.twelvedata) {
+                  TWELVE_DATA_API_KEY = importedObj.twelvedata;
+                  localStorage.setItem(STORAGE_KEY_TWELVEDATA, TWELVE_DATA_API_KEY);
+                }
+                if (importedObj.volume !== undefined) {
+                  currentVolume = parseFloat(importedObj.volume);
+                  if(els.alertVolume) els.alertVolume.value = currentVolume;
+                  localStorage.setItem('stockCalcVolume_PRO', currentVolume);
+                }
+                if (importedObj.customSound) {
+                  customSoundData = importedObj.customSound;
+                  alertAudio.src = customSoundData;
+                  localStorage.setItem('stockCalcCustomSound_PRO', customSoundData);
+                } else {
+                  customSoundData = null;
+                  alertAudio.src = defaultSoundUrl;
+                  localStorage.removeItem('stockCalcCustomSound_PRO');
+                }
+                updateSoundUI();
+                
+                // 3. 強制觸發存檔與推送到雲端，強行覆蓋雲端的舊資料
+                commitDataChange(false);
+                
+                showToast('🚀 資料已成功導入並同步至雲端！', 'success');
               } catch (err) {
                 showToast('導入失敗：檔案損毀或非 JSON 格式', 'error');
               }
