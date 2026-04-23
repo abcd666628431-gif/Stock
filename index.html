@@ -396,6 +396,9 @@
               <button type="button" id="btnAnalyzeVolToday" class="w-full bg-[#2a2a2a] hover:bg-[#333] border border-[#2979ff]/50 text-[#2979ff] text-[11px] font-bold py-1.5 rounded-lg transition-colors">
                   📉 分析當日波動 (5分K)
               </button>
+              <button type="button" id="btnAnalyzeCandles1Min" class="w-full bg-[#2a2a2a] hover:bg-[#333] border border-[#d946ef]/50 text-[#d946ef] text-[11px] font-bold py-1.5 rounded-lg transition-colors">
+                  📊 分析當日 1分K 升跌柱比例
+              </button>
               <div class="flex items-center bg-[#2a2a2a] border border-[#2979ff]/50 rounded-lg overflow-hidden transition-colors hover:bg-[#333]">
                 <input type="date" id="volStartDate" class="flex-1 bg-transparent text-white text-center font-bold outline-none text-[10px] py-1.5 px-0.5 border-r border-[#2979ff]/50 min-w-0" title="開始日期" />
                 <input type="date" id="volEndDate" class="flex-1 bg-transparent text-white text-center font-bold outline-none text-[10px] py-1.5 px-0.5 border-r border-[#2979ff]/50 min-w-0" title="結束日期" />
@@ -438,6 +441,32 @@
               <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center justify-center col-span-3">
                 <span class="text-[10px] text-slate-400 font-bold mb-0.5">平均所需回撤重回跌勢</span>
                 <span id="volAvgPullback" class="text-sm font-bold text-[#ff5252]">-</span>
+              </div>
+            </div>
+
+            <div id="candleRatioResult" class="hidden mt-3 space-y-2">
+              <div class="text-[10px] text-center text-slate-400 font-bold tracking-widest">--- 當日 1分K 柱狀比例 ---</div>
+              <div class="grid grid-cols-3 gap-2">
+                <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center">
+                  <span class="text-[9px] text-slate-400 font-bold mb-0.5">升柱 (多)</span>
+                  <span id="candleUpCount" class="text-sm font-bold text-[#00e676]">-</span>
+                  <span id="candleUpPct" class="text-[9px] text-[#00e676] opacity-80">-</span>
+                </div>
+                <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center">
+                  <span class="text-[9px] text-slate-400 font-bold mb-0.5">平盤 (十字)</span>
+                  <span id="candleFlatCount" class="text-sm font-bold text-slate-300">-</span>
+                  <span id="candleFlatPct" class="text-[9px] text-slate-300 opacity-80">-</span>
+                </div>
+                <div class="bg-[#1e1e1e] border border-[#444] rounded-lg p-1.5 flex flex-col items-center">
+                  <span class="text-[9px] text-slate-400 font-bold mb-0.5">跌柱 (空)</span>
+                  <span id="candleDownCount" class="text-sm font-bold text-[#ff5252]">-</span>
+                  <span id="candleDownPct" class="text-[9px] text-[#ff5252] opacity-80">-</span>
+                </div>
+              </div>
+              <div class="w-full h-1.5 rounded-full overflow-hidden flex bg-slate-800 border border-[#333]">
+                <div id="candleBarUp" class="h-full bg-[#00e676] transition-all duration-1000" style="width: 0%"></div>
+                <div id="candleBarFlat" class="h-full bg-slate-400 transition-all duration-1000" style="width: 0%"></div>
+                <div id="candleBarDown" class="h-full bg-[#ff5252] transition-all duration-1000" style="width: 0%"></div>
               </div>
             </div>
           </div>
@@ -985,6 +1014,19 @@
       volAvgDrop: document.getElementById('volAvgDrop'),
       volAvgRebound: document.getElementById('volAvgRebound'),
       volAvgPullback: document.getElementById('volAvgPullback'),
+      
+      // 升跌柱比例
+      btnAnalyzeCandles1Min: document.getElementById('btnAnalyzeCandles1Min'),
+      candleRatioResult: document.getElementById('candleRatioResult'),
+      candleUpCount: document.getElementById('candleUpCount'),
+      candleUpPct: document.getElementById('candleUpPct'),
+      candleDownCount: document.getElementById('candleDownCount'),
+      candleDownPct: document.getElementById('candleDownPct'),
+      candleFlatCount: document.getElementById('candleFlatCount'),
+      candleFlatPct: document.getElementById('candleFlatPct'),
+      candleBarUp: document.getElementById('candleBarUp'),
+      candleBarFlat: document.getElementById('candleBarFlat'),
+      candleBarDown: document.getElementById('candleBarDown'),
 
       // Display
       currentPriceDisp: document.getElementById('currentPriceDisp'),
@@ -1805,6 +1847,72 @@
 
     if(els.btnAnalyzeVolToday) els.btnAnalyzeVolToday.addEventListener('click', () => analyzeVolatility('today'));
     if(els.btnAnalyzeVolRange) els.btnAnalyzeVolRange.addEventListener('click', () => analyzeVolatility('range'));
+
+    window.analyzeCandlesRatio = async function() {
+      if(!els.tickerInput) return;
+      const symbol = els.tickerInput.value.toUpperCase().trim();
+      if (!symbol) return showToast('請先在上方輸入或抓取股票代號', 'error');
+
+      const btn = els.btnAnalyzeCandles1Min;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '分析中...';
+      btn.disabled = true;
+
+      try {
+          const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1min&outputsize=500&apikey=${TWELVE_DATA_API_KEY}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          if (data.code === 429) throw new Error('Twelve Data 頻率達免費上限');
+          if (data.code === 401) throw new Error('Twelve Data API Key 無效');
+          
+          if (data.values && data.values.length > 0) {
+              const sortedValues = data.values.reverse();
+              const lastDateStr = sortedValues[sortedValues.length - 1].datetime.split(' ')[0];
+              const todayValues = sortedValues.filter(v => v.datetime.startsWith(lastDateStr));
+              
+              let upCount = 0, downCount = 0, flatCount = 0;
+              todayValues.forEach(v => {
+                  const o = parseFloat(v.open);
+                  const c = parseFloat(v.close);
+                  if (c > o) upCount++;
+                  else if (c < o) downCount++;
+                  else flatCount++;
+              });
+
+              const total = upCount + downCount + flatCount;
+              if (total === 0) throw new Error('無法計算，無有效 K 線資料');
+
+              const upPct = (upCount / total) * 100;
+              const downPct = (downCount / total) * 100;
+              const flatPct = (flatCount / total) * 100;
+
+              els.candleUpCount.textContent = upCount;
+              els.candleUpPct.textContent = `${upPct.toFixed(1)}%`;
+              els.candleBarUp.style.width = `${upPct}%`;
+
+              els.candleDownCount.textContent = downCount;
+              els.candleDownPct.textContent = `${downPct.toFixed(1)}%`;
+              els.candleBarDown.style.width = `${downPct}%`;
+
+              els.candleFlatCount.textContent = flatCount;
+              els.candleFlatPct.textContent = `${flatPct.toFixed(1)}%`;
+              els.candleBarFlat.style.width = `${flatPct}%`;
+
+              els.candleRatioResult.classList.remove('hidden');
+              showToast('✅ 1分K 升跌柱比例分析完成', 'success');
+          } else {
+              throw new Error(data.message || '無法取得歷史資料');
+          }
+      } catch (e) {
+          showToast('分析失敗: ' + e.message, 'error');
+          els.candleRatioResult.classList.add('hidden');
+      } finally {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+      }
+    };
+    if(els.btnAnalyzeCandles1Min) els.btnAnalyzeCandles1Min.addEventListener('click', analyzeCandlesRatio);
 
     // --- 頁籤切換與日曆報表邏輯 ---
     window.switchRecordsTab = function(tab) {
