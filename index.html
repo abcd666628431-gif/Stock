@@ -1354,10 +1354,11 @@
       const dateObj = new Date(dateVal);
       const timeStr = dateObj.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'});
       
-      const idStr = Date.now().toString() + 'm';
+      // 確保同步 ID，儘管這是歷史手動紀錄不一定在當前倉位中，還是保持規範
+      const syncId = Date.now().toString();
 
       tradeHistory.unshift({ 
-        id: idStr, 
+        id: syncId + 'h', 
         time: timeStr, 
         dateStr: dateVal, 
         ticker: sym, 
@@ -1414,6 +1415,12 @@
       const rec = tradeHistory.find(r => r.id === id);
       if (!rec) return;
 
+      // 儲存舊資料以利用比對 (解決舊版本毫秒誤差無法對齊的問題)
+      const oldTicker = rec.ticker;
+      const oldPrice = rec.price;
+      const oldQty = rec.quantity;
+      const oldDir = rec.direction;
+
       rec.dateStr = document.getElementById('ehDate').value;
       const dateObj = new Date(rec.dateStr);
       rec.time = dateObj.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'});
@@ -1430,6 +1437,24 @@
       const dirRadio = document.querySelector('input[name="ehDirection"]:checked');
       rec.direction = dirRadio ? dirRadio.value : 'long';
 
+      // --- 同步修改當前倉位 (Current Position) ---
+      let targetRecord = null;
+      if (id.endsWith('h')) {
+         targetRecord = records.find(r => r.id === id.replace('h', ''));
+      }
+      if (!targetRecord) {
+         targetRecord = records.find(r => r.ticker === oldTicker && r.price === oldPrice && r.quantity === oldQty && r.direction === oldDir);
+      }
+      
+      if (targetRecord) {
+         targetRecord.ticker = rec.ticker;
+         targetRecord.price = rec.price;
+         targetRecord.quantity = rec.quantity;
+         targetRecord.cost = rec.price * rec.quantity;
+         targetRecord.direction = rec.direction;
+      }
+      // ------------------------------------------
+
       tradeHistory.sort((a,b) => {
         let timeA = a.dateStr ? new Date(a.dateStr).getTime() : parseInt(a.id);
         let timeB = b.dateStr ? new Date(b.dateStr).getTime() : parseInt(b.id);
@@ -1440,7 +1465,7 @@
       commitDataChange();
       
       closeEditHistoryModal();
-      showToast('✅ 紀錄已更新', 'success');
+      showToast('✅ 紀錄已同步更新', 'success');
     });
 
     document.getElementById('ehDeleteBtn').addEventListener('click', () => {
@@ -1448,11 +1473,11 @@
       showModal({
         type: 'confirm',
         title: '🗑️ 刪除歷史紀錄',
-        text: '確定要永久刪除此筆交易紀錄嗎？',
+        text: '確定要永久刪除此筆交易紀錄嗎？這會一併撤銷未平倉的當前倉位。',
         onConfirm: () => {
           deleteHistoryRecord(id);
           closeEditHistoryModal();
-          showToast('🗑️ 紀錄已刪除', 'info');
+          showToast('🗑️ 紀錄已撤銷', 'info');
         }
       });
     });
@@ -2746,9 +2771,12 @@
         const now = new Date();
         const timeStr = now.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'}) + ' ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         
-        records.unshift({ id: Date.now().toString(), ticker: s, price: p, quantity: q, cost: p * q, direction: dir });
+        // 確保同步 ID，解決誤差 BUG
+        const syncId = Date.now().toString();
+
+        records.unshift({ id: syncId, ticker: s, price: p, quantity: q, cost: p * q, direction: dir });
         tradeHistory.unshift({ 
-          id: Date.now().toString()+'h', 
+          id: syncId + 'h', 
           time: timeStr, 
           dateStr: getLocalDateString(now), 
           ticker: s, price: p, quantity: q, direction: dir 
@@ -2777,6 +2805,22 @@
     };
     
     window.deleteHistoryRecord = (id) => { 
+      // 找出該筆歷史紀錄
+      const rec = tradeHistory.find(r => r.id === id);
+      if (rec) {
+         // 嘗試同步刪除當前倉位
+         let targetRecordId = id.endsWith('h') ? id.replace('h', '') : null;
+         let foundInRecords = targetRecordId ? records.find(r => r.id === targetRecordId) : null;
+         
+         if (!foundInRecords) {
+            foundInRecords = records.find(r => r.ticker === rec.ticker && r.price === rec.price && r.quantity === rec.quantity && r.direction === rec.direction);
+         }
+         
+         if (foundInRecords) {
+            records = records.filter(r => r.id !== foundInRecords.id);
+         }
+      }
+
       tradeHistory = tradeHistory.filter(r => r.id !== id); 
       commitDataChange(); 
     };
