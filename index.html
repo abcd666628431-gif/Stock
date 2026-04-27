@@ -286,7 +286,6 @@
         <!-- 新增買入 -->
         <div class="card-panel p-2 md:p-3 rounded-xl">
           <h2 class="text-[11px] md:text-sm font-bold uppercase tracking-wider text-white mb-2 md:mb-3 flex items-center">
-            <!-- 🌟 更換：新的清單/紀錄風格圖示 -->
             <svg class="mr-2 text-[#2979ff]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 20v-8"></path><path d="M8 16h8"></path><rect x="4" y="4" width="16" height="16" rx="2"></rect>
             </svg>
@@ -317,7 +316,6 @@
               預計新平均成本: <span id="previewAvgCost" class="font-bold text-[#00e676] ml-1">-</span>
             </div>
             
-            <!-- 🌟 新增模擬按鍵佈局 -->
             <div class="flex gap-2">
               <button type="submit" class="flex-[1.5] bg-[#2979ff] hover:bg-[#1c54b2] text-white text-xs md:text-sm font-bold py-1.5 md:py-2 rounded-lg transition-colors shadow-lg">
                 加入計算模型
@@ -326,7 +324,6 @@
                 新增模擬
               </button>
             </div>
-
           </form>
         </div>
 
@@ -591,7 +588,10 @@
           </div>
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">平均成本</span>
-            <span id="avgPriceDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5">0</span>
+            <div class="flex flex-col items-start justify-center mt-0 md:mt-0.5">
+              <span id="avgPriceDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5">0</span>
+              <span id="avgPriceDiffDisp" class="text-[8px] md:text-[10px] font-bold text-slate-600 leading-none mt-0.5 md:mt-1">(-)</span>
+            </div>
           </div>
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前總持股</span>
@@ -630,10 +630,8 @@
 
         <!-- 列表 -->
         <div class="card-panel rounded-2xl overflow-hidden flex flex-col flex-1 min-h-[300px]">
-          <!-- 🌟 修正：加入 min-h-[52px] md:min-h-[64px] 鎖定高度，避免右側搜尋列出現時撐破版面產生震動 -->
           <div class="p-2 md:p-4 border-b border-[#333] flex justify-between items-center bg-[#1e1e1e] min-h-[52px] md:min-h-[64px]">
             <div class="flex space-x-2 md:space-x-6 overflow-x-auto no-scrollbar items-end h-full">
-              <!-- 🌟 修正：為未選中的分頁加入 border-transparent，解決切換時 2px 的文字跳動問題 -->
               <button id="tabBtnCurrent" onclick="switchRecordsTab('current')" class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#2979ff] border-b-2 border-[#2979ff] pb-1 transition-all whitespace-nowrap">當前倉位 (<span id="currentCount">0</span>)</button>
               <button id="tabBtnHistory" onclick="switchRecordsTab('history')" class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 border-b-2 border-transparent pb-1 transition-all whitespace-nowrap">歷史紀錄 (<span id="historyCount">0</span>)</button>
               <button id="tabBtnReport" onclick="switchRecordsTab('report')" class="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 border-b-2 border-transparent pb-1 transition-all whitespace-nowrap">收益日曆</button>
@@ -981,12 +979,16 @@
             
             // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
             if (symCost > 0) {
+              const avgPnlPerShare = totalPnl / symShares;
+              if(els.avgPriceDiffDisp) { els.avgPriceDiffDisp.style.color = color; els.avgPriceDiffDisp.textContent = '(每股價差 ' + (avgPnlPerShare > 0 ? '+' : '') + formatNumber(avgPnlPerShare, 4) + ')'; }
               if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = '(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)'; }
             } else {
+              if(els.avgPriceDiffDisp) { els.avgPriceDiffDisp.style.color = color; els.avgPriceDiffDisp.textContent = '(-)'; }
               if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = '(-)'; }
             }
         } else {
             if(els.currentPriceDisp) els.currentPriceDisp.style.color = '#fff';
+            if(els.avgPriceDiffDisp) { els.avgPriceDiffDisp.style.color = '#718096'; els.avgPriceDiffDisp.textContent = '(-)'; }
             if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = '#718096'; els.currentPnlAmountDisp.textContent = '-'; }
             if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.textContent = '(-)'; }
         }
@@ -1197,6 +1199,7 @@
       // Display
       currentPriceDisp: document.getElementById('currentPriceDisp'),
       avgPriceDisp: document.getElementById('avgPriceDisp'),
+      avgPriceDiffDisp: document.getElementById('avgPriceDiffDisp'),
       totalSharesDisp: document.getElementById('totalSharesDisp'),
       totalCostDisp: document.getElementById('totalCostDisp'),
       currentPnlAmountDisp: document.getElementById('currentPnlAmountDisp'),
@@ -3052,6 +3055,7 @@
 
       els.recordsTableBody.innerHTML = records.map((r, index) => {
         let pnlHtml = '<td class="px-1.5 py-1.5 md:px-6 md:py-3 text-slate-500 text-[10px] md:text-sm">-</td>';
+        let priceDiffHtml = '';
         const isShort = r.direction === 'short';
         const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">多</span>';
         
@@ -3066,6 +3070,10 @@
           const color = rowPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
           const sign = rowPnl > 0 ? '+' : '';
           pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold text-[10px] md:text-sm ${color}">${sign}${formatNumber(rowPnl)} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${sign}${formatNumber(rowPnlPct)}%)</span></td>`;
+          
+          const diffPerShare = isShort ? (r.price - currentPrice) : (currentPrice - r.price);
+          const diffSign = diffPerShare > 0 ? '+' : '';
+          priceDiffHtml = `<div class="text-[8px] md:text-[9px] font-bold mt-0.5 ${color}" title="每股價差">${diffSign}${formatNumber(diffPerShare, 4)}</div>`;
         }
 
         // 視覺上淡化已被排除計算的隱藏紀錄
@@ -3079,7 +3087,10 @@
             </div>
           </td>
           <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm">${formatNumber(r.quantity)}</td>
-          <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm text-slate-300">$${formatNumber(r.price, 4)}</td>
+          <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm text-slate-300">
+            <div>$${formatNumber(r.price, 4)}</div>
+            ${priceDiffHtml}
+          </td>
           <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm text-slate-400">$${formatNumber(r.cost)}</td>
           ${pnlHtml}
           <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-right whitespace-nowrap">
@@ -3133,6 +3144,7 @@
           }
 
           let pnlHtml = '<span class="text-slate-600">-</span>';
+          let priceDiffHtml = '';
           const sPrice = parseFloat(r.sellPrice);
           const isShort = r.direction === 'short';
           const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">多</span>';
@@ -3146,6 +3158,10 @@
             const color = pnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
             const sign = pnl > 0 ? '+' : '';
             pnlHtml = `<span class="font-bold ${color}">${sign}${formatNumber(pnl)} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${sign}${formatNumber(pnlPct)}%)</span></span>`;
+            
+            const diffPerShare = isShort ? (r.price - sPrice) : (sPrice - r.price);
+            const diffSign = diffPerShare > 0 ? '+' : '';
+            priceDiffHtml = `<div class="text-[8px] md:text-[9px] font-bold mt-0.5 ${color}" title="每股價差">${diffSign}${formatNumber(diffPerShare, 4)}</div>`;
           }
 
           htmlStr += `
@@ -3160,6 +3176,7 @@
             <td class="px-1.5 md:px-4 py-1.5 md:py-3 text-slate-300 whitespace-nowrap">$${formatNumber(r.price, 4)}</td>
             <td class="px-1 md:px-2 py-1 md:py-2 text-center">
               <input type="number" step="any" placeholder="-" value="${r.sellPrice != null ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入賣出價">
+              ${priceDiffHtml}
             </td>
             <td class="px-1 md:px-2 py-1 md:py-2 text-center">
               <input type="number" step="any" placeholder="-" value="${r.fee != null ? r.fee : ''}" onchange="updateHistoryTrade('${r.id}', 'fee', this.value)" class="w-10 md:w-14 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center" title="輸入手續費">
