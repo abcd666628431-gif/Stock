@@ -584,7 +584,7 @@
         <div class="grid grid-cols-5 gap-1 md:gap-3">
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center relative overflow-hidden group">
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前成交價</span>
-            <input id="currentPriceDisp" type="number" step="any" class="text-xs sm:text-sm md:text-xl font-bold bg-transparent border-none p-0 w-full focus:ring-0 outline-none leading-none mt-0 md:mt-0.5">
+            <input id="currentPriceDisp" type="number" step="any" class="text-xs sm:text-sm md:text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none leading-none mt-0 md:mt-0.5 max-w-full transition-all duration-75" style="width: 4ch;">
           </div>
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">平均成本</span>
@@ -597,9 +597,9 @@
           
           <!-- 🌟 新增：可點擊切換 USD/MOP 並顯示現值 -->
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center cursor-pointer transition-colors hover:bg-[#2a2a2a] group relative" onclick="toggleDashboardMop()" title="點擊切換 USD/MOP">
-            <div class="flex items-center space-x-1 mt-0">
+            <div class="flex items-center mt-0">
               <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前總成本</span>
-              <span id="costCurrencyLabel" class="text-[9px] md:text-[10px] font-bold text-slate-300 bg-[#333] px-1.5 py-0.5 rounded leading-none hidden sm:inline">USD</span>
+              <span id="costCurrencyLabel" class="text-[10px] md:text-[11px] font-bold text-slate-200 bg-[#333] px-2 py-1 rounded border border-[#555] leading-none ml-1.5 shadow-sm hidden sm:inline-block transition-colors">USD</span>
             </div>
             <div class="flex flex-col items-start justify-center mt-0 md:mt-0.5">
               <span id="totalCostDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5">$0</span>
@@ -611,7 +611,6 @@
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">倉位總盈虧</span>
             <div class="flex flex-col items-start justify-center mt-0 md:mt-0.5">
               <span id="currentPnlAmountDisp" class="text-xs sm:text-sm md:text-xl font-bold text-slate-600 leading-none">-</span>
-              <!-- 🌟 移除每股價差，回歸清爽百分比 -->
               <span id="currentPnlPercentDisp" class="text-[8px] md:text-[10px] font-bold text-slate-600 leading-none mt-0.5 md:mt-1">(-)</span>
             </div>
           </div>
@@ -949,10 +948,20 @@
     // 🌟 全新重構：嚴格限定在「當前搜尋的股票代碼」下計算看板資訊，解決多股混算與空單計算錯誤問題
     function updateDashboard() {
         const currentSym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
-        const v = els.currentPriceDisp ? parseFloat(els.currentPriceDisp.value) : NaN;
+        const valStr = els.currentPriceDisp ? els.currentPriceDisp.value : '';
+        const v = parseFloat(valStr);
 
-        // 只篩選出符合目前上方輸入框代號的倉位紀錄，並剔除已被使用者臨時隱藏的紀錄
+        // 🌟 動態伸縮：當前成交價輸入框寬度
+        if(els.currentPriceDisp) {
+            const length = valStr.length > 0 ? valStr.length : 1;
+            // 加上 1.2ch 的緩衝空間避免數字被截斷
+            els.currentPriceDisp.style.width = (length + 1.2) + 'ch';
+        }
+
+        // 1. 篩選出符合目前上方輸入框代號的倉位紀錄
         const activeRecords = currentSym ? records.filter(r => r.ticker === currentSym) : [];
+        
+        // 2. 🌟 剔除已被使用者臨時隱藏的紀錄
         const visibleRecords = activeRecords.filter(r => !r.isHidden);
         
         let symShares = 0, symCost = 0;
@@ -972,6 +981,13 @@
 
         let totalPnl = 0;
 
+        // --- 🌟 處理 MOP 切換與總成本/現值顯示 ---
+        const multiplier = isDashboardMop ? MOP_RATE : 1;
+        const prefix = '$'; // 🌟 去除 MOP 字眼，統一保持 $ 符號
+        
+        if(els.costCurrencyLabel) els.costCurrencyLabel.textContent = isDashboardMop ? 'MOP' : 'USD';
+        if(els.totalCostDisp) els.totalCostDisp.textContent = prefix + formatNumber(symCost * multiplier);
+
         if (!isNaN(v) && symShares > 0) {
             const c = (symAvgPrice > 0 && v > symAvgPrice) ? '#00e676' : (symAvgPrice > 0 && v < symAvgPrice) ? '#ff5252' : '#fff';
             if (els.currentPriceDisp) els.currentPriceDisp.style.color = c;
@@ -982,8 +998,14 @@
                 totalPnl += diff * r.quantity;
             });
             const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
-            if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = color; els.currentPnlAmountDisp.textContent = (totalPnl > 0 ? '+' : '') + formatNumber(totalPnl); }
+            const displayPnl = totalPnl * multiplier;
             
+            if(els.currentPnlAmountDisp) { 
+                els.currentPnlAmountDisp.style.color = color; 
+                els.currentPnlAmountDisp.textContent = (displayPnl > 0 ? '+' : '') + formatNumber(displayPnl); 
+            }
+            
+            // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
             if (symCost > 0) {
               if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = '(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)'; }
             } else {
@@ -995,13 +1017,7 @@
             if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.textContent = '(-)'; }
         }
 
-        // --- 🌟 處理 MOP 切換與總成本/現值顯示 ---
         const totalValue = symCost + totalPnl;
-        const multiplier = isDashboardMop ? MOP_RATE : 1;
-        const prefix = '$'; // 🌟 統一使用 $ 符號，移除左側的 MOP 綴詞
-        
-        if(els.costCurrencyLabel) els.costCurrencyLabel.textContent = isDashboardMop ? 'MOP' : 'USD';
-        if(els.totalCostDisp) els.totalCostDisp.textContent = prefix + formatNumber(symCost * multiplier);
         
         if(els.totalValueDisp) {
             if (!isNaN(v) && symShares > 0) {
