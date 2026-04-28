@@ -599,7 +599,7 @@
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center cursor-pointer transition-colors hover:bg-[#2a2a2a] group relative" onclick="toggleDashboardMop()" title="點擊切換 USD/MOP">
             <div class="flex items-center space-x-1 mt-0">
               <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前總成本</span>
-              <span id="costCurrencyLabel" class="text-[6px] text-slate-400 bg-[#333] px-1 rounded leading-none hidden sm:inline">USD</span>
+              <span id="costCurrencyLabel" class="text-[9px] md:text-[10px] font-bold text-slate-300 bg-[#333] px-1.5 py-0.5 rounded leading-none hidden sm:inline">USD</span>
             </div>
             <div class="flex flex-col items-start justify-center mt-0 md:mt-0.5">
               <span id="totalCostDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5">$0</span>
@@ -998,7 +998,7 @@
         // --- 🌟 處理 MOP 切換與總成本/現值顯示 ---
         const totalValue = symCost + totalPnl;
         const multiplier = isDashboardMop ? MOP_RATE : 1;
-        const prefix = isDashboardMop ? 'MOP$' : '$';
+        const prefix = '$'; // 🌟 統一使用 $ 符號，移除左側的 MOP 綴詞
         
         if(els.costCurrencyLabel) els.costCurrencyLabel.textContent = isDashboardMop ? 'MOP' : 'USD';
         if(els.totalCostDisp) els.totalCostDisp.textContent = prefix + formatNumber(symCost * multiplier);
