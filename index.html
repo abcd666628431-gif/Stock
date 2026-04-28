@@ -1007,12 +1007,17 @@
             
             // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
             if (symCost > 0) {
+              const avgPnlPerShare = totalPnl / symShares;
+              // 🌟 修正：每股價差保留 2 位小數
+              if(els.avgPriceDiffDisp) { els.avgPriceDiffDisp.style.color = color; els.avgPriceDiffDisp.textContent = '(每股價差 ' + (avgPnlPerShare > 0 ? '+' : '') + formatNumber(avgPnlPerShare, 2) + ')'; }
               if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = '(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)'; }
             } else {
+              if(els.avgPriceDiffDisp) { els.avgPriceDiffDisp.style.color = color; els.avgPriceDiffDisp.textContent = '(-)'; }
               if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = '(-)'; }
             }
         } else {
             if(els.currentPriceDisp) els.currentPriceDisp.style.color = '#fff';
+            if(els.avgPriceDiffDisp) { els.avgPriceDiffDisp.style.color = '#718096'; els.avgPriceDiffDisp.textContent = '(-)'; }
             if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = '#718096'; els.currentPnlAmountDisp.textContent = '-'; }
             if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.textContent = '(-)'; }
         }
@@ -3113,7 +3118,8 @@
           
           const diffPerShare = isShort ? (r.price - currentPrice) : (currentPrice - r.price);
           const diffSign = diffPerShare > 0 ? '+' : '';
-          priceDiffHtml = `<span class="text-[8px] md:text-[10px] font-bold ml-1 ${color}" title="每股價差">(${diffSign}${formatNumber(diffPerShare, 4)})</span>`;
+          // 🌟 修正：列表中的每股價差保留 2 位小數
+          priceDiffHtml = `<span class="text-[8px] md:text-[10px] font-bold ml-1 ${color}" title="每股價差">(${diffSign}${formatNumber(diffPerShare, 2)})</span>`;
         }
 
         // 視覺上淡化已被排除計算的隱藏紀錄
@@ -3200,7 +3206,8 @@
             
             const diffPerShare = isShort ? (r.price - sPrice) : (sPrice - r.price);
             const diffSign = diffPerShare > 0 ? '+' : '';
-            priceDiffHtml = `<div class="text-[8px] md:text-[9px] font-bold mt-0.5 ${color}" title="每股價差">(${diffSign}${formatNumber(diffPerShare, 4)})</div>`;
+            // 🌟 修正：歷史紀錄的每股價差保留 2 位小數
+            priceDiffHtml = `<div class="text-[8px] md:text-[9px] font-bold mt-0.5 ${color}" title="每股價差">(${diffSign}${formatNumber(diffPerShare, 2)})</div>`;
           }
 
           htmlStr += `
