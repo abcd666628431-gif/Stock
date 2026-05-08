@@ -1548,14 +1548,15 @@
     };
     
     // --- 獨立工具功能綁定 (單筆計算、波段、止損、提醒等) ---
+    let activeSingleMode = 'sell'; // 獨立單筆計算的模式變數，防止與預期試算衝突
     function calculateSingleTrade(source) {
       if(!els.singleCostInput) return;
-      if(source) activeTargetMode = source;
+      if(source) activeSingleMode = source;
       const c = parseFloat(els.singleCostInput.value), q = parseFloat(els.singleQtyInput.value);
       let s = parseFloat(els.singleSellInput.value), pct = parseFloat(els.singlePctInput.value);
       if(isNaN(c)) return els.singleResult.classList.add('hidden');
-      if(source === 'pct' && !isNaN(pct)) els.singleSellInput.value = s = parseFloat((c * (1 + pct/100)).toFixed(4));
-      else if(source === 'sell' && !isNaN(s)) els.singlePctInput.value = pct = parseFloat((((s-c)/c)*100).toFixed(2));
+      if(activeSingleMode === 'pct' && !isNaN(pct)) els.singleSellInput.value = s = parseFloat((c * (1 + pct/100)).toFixed(4));
+      else if(activeSingleMode === 'sell' && !isNaN(s)) els.singlePctInput.value = pct = parseFloat((((s-c)/c)*100).toFixed(2));
       
       if(!isNaN(c) && !isNaN(s)) {
           const d = s-c, p = (d/c)*100, color = d>=0 ? 'text-[#00e676]' : 'text-[#ff5252]';
@@ -1564,6 +1565,11 @@
       } else els.singleResult.classList.add('hidden');
     }
     if(els.singleSellInput) { els.singleSellInput.addEventListener('input', ()=>calculateSingleTrade('sell')); els.singlePctInput.addEventListener('input', ()=>calculateSingleTrade('pct')); els.singleCostInput.addEventListener('input', ()=>calculateSingleTrade()); els.singleQtyInput.addEventListener('input', ()=>calculateSingleTrade()); }
+
+    // 🌟 修復：補回被遺漏的「預期試算」輸入框監聽器，讓輸入時能即時觸發運算
+    if(els.targetPriceInput) els.targetPriceInput.addEventListener('input', () => { activeTargetMode = 'price'; updateDashboard(); });
+    if(els.percentInput) els.percentInput.addEventListener('input', () => { activeTargetMode = 'percent'; updateDashboard(); });
+    if(els.expectedPnlInput) els.expectedPnlInput.addEventListener('input', () => { activeTargetMode = 'pnl'; updateDashboard(); });
 
     window.calculateSmartStopLoss = async function() {
       if(!els.tickerInput) return;
