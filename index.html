@@ -1020,8 +1020,7 @@
             if (els.currentPriceDisp) els.currentPriceDisp.style.color = c;
 
             visibleRecords.forEach(r => {
-                const isShort = r.direction === 'short';
-                const diff = isShort ? (r.price - v) : (v - r.price);
+                const diff = (v - r.price);
                 totalPnl += diff * r.quantity;
             });
             const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
@@ -2453,7 +2452,7 @@
         }
 
         const fee = parseFloat(r.fee) || 0;
-        const pnl = (r.direction === 'short' ? (r.price - sPrice) : (sPrice - r.price)) * r.quantity - fee;
+        const pnl = (sPrice - r.price) * r.quantity - fee;
         
         grandTotal += pnl;
 
@@ -2569,7 +2568,7 @@
 
         const fee = parseFloat(r.fee) || 0;
         
-        const pnl = (r.direction === 'short' ? (r.price - sPrice) : (sPrice - r.price)) * r.quantity - fee;
+        const pnl = (sPrice - r.price) * r.quantity - fee;
 
         if (!aggregated[r.ticker]) aggregated[r.ticker] = 0;
         aggregated[r.ticker] += pnl;
@@ -2855,8 +2854,7 @@
         if (!isNaN(val)) {
           let p = 0;
           visibleRecords.forEach(r => {
-             const isShort = r.direction === 'short';
-             p += (isShort ? r.price - val : val - r.price) * r.quantity;
+             p += (val - r.price) * r.quantity;
           });
           const pct = symCost > 0 ? (p / symCost) * 100 : 0;
           const color = p >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
@@ -2868,9 +2866,8 @@
           const upP = symAvgPrice * (1 + val/100), dwP = symAvgPrice * (1 - val/100);
           let upPn = 0, dwPn = 0;
           visibleRecords.forEach(r => {
-             const isShort = r.direction === 'short';
-             upPn += (isShort ? r.price - upP : upP - r.price) * r.quantity;
-             dwPn += (isShort ? r.price - dwP : dwP - r.price) * r.quantity;
+             upPn += (upP - r.price) * r.quantity;
+             dwPn += (dwP - r.price) * r.quantity;
           });
           html = `
             <div class="p-2.5 rounded-xl bg-[#00e676]/10 border border-[#00e676]/30 text-[11px]">
@@ -2886,23 +2883,18 @@
         let val = Math.abs(parseFloat(els.expectedPnlInput.value));
         if (!isNaN(val)) {
           let netDelta = 0;
-          let costLong = 0, costShort = 0;
+          let costLong = 0;
           
           visibleRecords.forEach(r => {
-             if (r.direction === 'short') {
-                 netDelta -= r.quantity;
-                 costShort += r.cost;
-             } else {
-                 netDelta += r.quantity;
-                 costLong += r.cost;
-             }
+             netDelta += r.quantity;
+             costLong += r.cost;
           });
 
           if (netDelta === 0) {
-             html = `<div class="p-2.5 rounded-xl bg-slate-800 text-center text-xs text-slate-400">多空倉位數量完全抵銷，無法試算目標價</div>`;
+             html = `<div class="p-2.5 rounded-xl bg-slate-800 text-center text-xs text-slate-400">倉位數量為零，無法試算目標價</div>`;
           } else {
-             const targetProfit = (val + costLong - costShort) / netDelta;
-             const targetLoss = (-val + costLong - costShort) / netDelta;
+             const targetProfit = (val + costLong) / netDelta;
+             const targetLoss = (-val + costLong) / netDelta;
              const pct = symCost > 0 ? (val / symCost) * 100 : 0;
              
              html = `
@@ -3153,8 +3145,8 @@
         
         // 嚴格判定：只有當前選擇的代碼才能吃到「現價」的即時盈虧顯示！ (即便是隱藏狀態，也可在列表預覽其獨立盈虧)
         if (!isNaN(currentPrice) && r.ticker === currentSym) {
-          const rowPnl = (isShort ? (r.price - currentPrice) : (currentPrice - r.price)) * r.quantity;
-          const rowPnlPct = ((isShort ? (r.price - currentPrice) : (currentPrice - r.price)) / r.price) * 100;
+          const rowPnl = (currentPrice - r.price) * r.quantity;
+          const rowPnlPct = ((currentPrice - r.price) / r.price) * 100;
           const color = rowPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
           const sign = rowPnl > 0 ? '+' : '';
           
@@ -3162,7 +3154,7 @@
           const dispRowPnlPct = maskText(`${sign}${formatNumber(rowPnlPct)}%`);
           pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold text-[10px] md:text-sm ${color}">${dispRowPnl} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${dispRowPnlPct})</span></td>`;
           
-          const diffPerShare = isShort ? (r.price - currentPrice) : (currentPrice - r.price);
+          const diffPerShare = (currentPrice - r.price);
           const diffSign = diffPerShare > 0 ? '+' : '';
           const dispDiff = `${diffSign}${formatNumber(diffPerShare, 2)}`;
           priceDiffHtml = `<span class="text-[8px] md:text-[10px] font-bold ml-1 ${color}" title="每股價差">(${dispDiff})</span>`;
@@ -3247,7 +3239,7 @@
 
           if (!isNaN(sPrice)) {
             const fee = parseFloat(r.fee) || 0;
-            const pnl = (isShort ? (r.price - sPrice) : (sPrice - r.price)) * r.quantity - fee;
+            const pnl = (sPrice - r.price) * r.quantity - fee;
             const pnlPct = (pnl / (r.price * r.quantity)) * 100;
             const color = pnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
             const sign = pnl > 0 ? '+' : '';
@@ -3256,7 +3248,7 @@
             const dispPnlPct = maskText(`${sign}${formatNumber(pnlPct)}%`);
             pnlHtml = `<span class="font-bold ${color}">${dispPnl} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${dispPnlPct})</span></span>`;
             
-            const diffPerShare = isShort ? (r.price - sPrice) : (sPrice - r.price);
+            const diffPerShare = (sPrice - r.price);
             const diffSign = diffPerShare > 0 ? '+' : '';
             const dispDiff = `${diffSign}${formatNumber(diffPerShare, 2)}`;
             priceDiffHtml = `<div class="text-[8px] md:text-[9px] font-bold mt-0.5 ${color}" title="每股價差">(${dispDiff})</div>`;
