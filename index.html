@@ -830,6 +830,9 @@
     let isDashboardMop = false;
     const MOP_RATE = 8;
     
+    // 🌟 單點解鎖記憶集
+    let unlockedMasks = new Set();
+    
     window.toggleDashboardMop = function() {
         isDashboardMop = !isDashboardMop;
         updateDashboard();
@@ -841,6 +844,10 @@
         localStorage.setItem('stockCalcPrivacy_PRO', isPrivacyMode);
         document.getElementById('privacyBtnIcon').innerHTML = isPrivacyMode ? svgIconEyeOff : svgIconEye;
         
+        if (!isPrivacyMode) {
+            unlockedMasks.clear(); // 關閉時清空解鎖記憶
+        }
+        
         updateDashboard();
         if (activeRecordsTab === 'current') renderTable();
         else if (activeRecordsTab === 'history') renderHistoryTable();
@@ -850,9 +857,28 @@
         showToast(isPrivacyMode ? '🙈 資金數據已隱藏' : '🐵 資金數據已顯示', 'info');
     };
 
-    // 🌟 隱私遮罩輔助函數
-    function maskText(value, defaultFormat = '') {
-        return isPrivacyMode ? '***' : value;
+    // 🌟 隱私單點切換
+    window.toggleSingleMask = function(key, e) {
+        if(e) e.stopPropagation();
+        if (unlockedMasks.has(key)) {
+            unlockedMasks.delete(key);
+        } else {
+            unlockedMasks.add(key);
+        }
+        updateDashboard();
+        if (activeRecordsTab === 'current') renderTable();
+        else if (activeRecordsTab === 'history') renderHistoryTable();
+        else if (activeRecordsTab === 'report') renderReport();
+        else if (activeRecordsTab === 'details') renderDetails();
+    };
+
+    // 🌟 隱私遮罩輔助函數 (重構為支援單點解鎖)
+    function maskText(value, key) {
+        if (!isPrivacyMode) return value;
+        const isUnlocked = unlockedMasks.has(key);
+        const displayVal = isUnlocked ? value : '***';
+        // 無痕外觀，無虛線，點擊切換
+        return `<span class="cursor-pointer transition-colors hover:text-white" onclick="toggleSingleMask('${key}', event)">${displayVal}</span>`;
     }
 
     // 🌟 新增：Firebase 連線與權限診斷工具
@@ -998,8 +1024,8 @@
         });
         const symAvgPrice = symShares > 0 ? symCost / symShares : 0;
 
-        if(els.totalSharesDisp) els.totalSharesDisp.textContent = maskText(formatNumber(symShares));
-        if(els.avgPriceDisp) els.avgPriceDisp.textContent = maskText(formatNumber(symAvgPrice, 4));
+        if(els.totalSharesDisp) els.totalSharesDisp.innerHTML = maskText(formatNumber(symShares), 'dash_shares');
+        if(els.avgPriceDisp) els.avgPriceDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'dash_avg');
 
         const dis = symShares === 0;
         if(els.targetPriceInput) els.targetPriceInput.disabled = dis;
@@ -1013,7 +1039,7 @@
         const prefix = '$'; 
         
         if(els.costCurrencyLabel) els.costCurrencyLabel.textContent = isDashboardMop ? 'MOP' : 'USD';
-        if(els.totalCostDisp) els.totalCostDisp.textContent = isPrivacyMode ? '***' : prefix + formatNumber(symCost * multiplier);
+        if(els.totalCostDisp) els.totalCostDisp.innerHTML = maskText(prefix + formatNumber(symCost * multiplier), 'dash_cost');
 
         if (!isNaN(v) && symShares > 0) {
             const c = (symAvgPrice > 0 && v > symAvgPrice) ? '#00e676' : (symAvgPrice > 0 && v < symAvgPrice) ? '#ff5252' : '#fff';
@@ -1028,32 +1054,32 @@
             
             if(els.currentPnlAmountDisp) { 
                 els.currentPnlAmountDisp.style.color = color; 
-                els.currentPnlAmountDisp.textContent = maskText((displayPnl > 0 ? '+' : '') + formatNumber(displayPnl)); 
+                els.currentPnlAmountDisp.innerHTML = maskText((displayPnl > 0 ? '+' : '') + formatNumber(displayPnl), 'dash_pnl_amt'); 
             }
             
             // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
             if (symCost > 0) {
               if(els.currentPnlPercentDisp) { 
                   els.currentPnlPercentDisp.style.color = color; 
-                  els.currentPnlPercentDisp.textContent = maskText('(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)'); 
+                  els.currentPnlPercentDisp.innerHTML = maskText('(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)', 'dash_pnl_pct'); 
               }
             } else {
-              if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.textContent = maskText('(-)'); }
+              if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
             }
         } else {
             if(els.currentPriceDisp) els.currentPriceDisp.style.color = '#fff';
-            if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = '#718096'; els.currentPnlAmountDisp.textContent = maskText('-'); }
-            if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.textContent = maskText('(-)'); }
+            if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = '#718096'; els.currentPnlAmountDisp.innerHTML = maskText('-', 'dash_pnl_amt'); }
+            if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
         }
 
         const totalValue = symCost + totalPnl;
         
         if(els.totalValueDisp) {
             if (!isNaN(v) && symShares > 0) {
-               els.totalValueDisp.textContent = '現值: ' + maskText(prefix + formatNumber(totalValue * multiplier));
+               els.totalValueDisp.innerHTML = '現值: ' + maskText(prefix + formatNumber(totalValue * multiplier), 'dash_val');
                els.totalValueDisp.className = `text-[8px] md:text-[10px] font-bold leading-none mt-0.5 md:mt-1 ${totalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]'}`;
             } else {
-               els.totalValueDisp.textContent = '現值: ' + maskText(prefix + formatNumber(symCost * multiplier));
+               els.totalValueDisp.innerHTML = '現值: ' + maskText(prefix + formatNumber(symCost * multiplier), 'dash_val');
                els.totalValueDisp.className = 'text-[8px] md:text-[10px] font-bold text-slate-400 leading-none mt-0.5 md:mt-1';
             }
         }
@@ -2452,6 +2478,7 @@
         }
 
         const fee = parseFloat(r.fee) || 0;
+        // 已確保歷史紀錄中的方向盈虧統一為 (sPrice - r.price)
         const pnl = (sPrice - r.price) * r.quantity - fee;
         
         grandTotal += pnl;
@@ -2504,7 +2531,7 @@
         }
         
         // 🌟 報表套用隱私遮罩
-        const displayProfitStr = maskText(profitStr);
+        const displayProfitStr = maskText(profitStr, `rep_day_${year}_${month}_${d}`);
 
         gridHtml += `
           <div class="flex flex-col items-center justify-center p-0.5 md:p-1 min-h-[50px] md:min-h-[75px] rounded ${bgClass} overflow-hidden transition-all duration-300">
@@ -2517,18 +2544,18 @@
       els.reportCalendarGrid.innerHTML = gridHtml;
       
       const displayMonthTotal = monthlyTotal * multiplier; 
-      els.reportMonthTotal.textContent = maskText((displayMonthTotal > 0 ? '+' : '') + formatNumber(displayMonthTotal));
+      els.reportMonthTotal.innerHTML = maskText((displayMonthTotal > 0 ? '+' : '') + formatNumber(displayMonthTotal), 'rep_tot_m');
       els.reportMonthTotal.className = `text-lg md:text-xl font-bold tracking-tight ${displayMonthTotal >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]'}`;
 
       const displayYearTotal = yearlyTotal * multiplier;
       if (els.reportYearTotal) {
-        els.reportYearTotal.textContent = maskText((displayYearTotal > 0 ? '+' : '') + formatNumber(displayYearTotal));
+        els.reportYearTotal.innerHTML = maskText((displayYearTotal > 0 ? '+' : '') + formatNumber(displayYearTotal), 'rep_tot_y');
         els.reportYearTotal.className = `text-lg md:text-xl font-bold tracking-tight ${displayYearTotal >= 0 ? 'text-[#2979ff]' : 'text-[#ff9100]'}`;
       }
 
       const displayGrandTotal = grandTotal * multiplier;
       if (els.reportGrandTotal) {
-        els.reportGrandTotal.textContent = maskText((displayGrandTotal > 0 ? '+' : '') + formatNumber(displayGrandTotal));
+        els.reportGrandTotal.innerHTML = maskText((displayGrandTotal > 0 ? '+' : '') + formatNumber(displayGrandTotal), 'rep_tot_g');
         els.reportGrandTotal.className = `text-lg md:text-xl font-bold tracking-tight ${displayGrandTotal >= 0 ? 'text-[#d946ef]' : 'text-[#f43f5e]'}`;
       }
     }
@@ -2568,6 +2595,7 @@
 
         const fee = parseFloat(r.fee) || 0;
         
+        // 已確保歷史紀錄中的方向盈虧統一為 (sPrice - r.price)
         const pnl = (sPrice - r.price) * r.quantity - fee;
 
         if (!aggregated[r.ticker]) aggregated[r.ticker] = 0;
@@ -2598,7 +2626,7 @@
         const sign = item.pnl > 0 ? '+' : '';
         
         // 🌟 排行榜金額套用隱私遮罩
-        const dispPnlStr = maskText(`${sign}${formatNumber(displayPnl)}`);
+        const dispPnlStr = maskText(`${sign}${formatNumber(displayPnl)}`, 'det_pnl_' + item.ticker);
         
         let marketTag = 'US';
         if (item.ticker.includes('.')) {
@@ -2838,7 +2866,7 @@
     if(els.percentInput) els.percentInput.addEventListener('input', () => { activeTargetMode = 'percent'; updateDashboard(); });
     if(els.expectedPnlInput) els.expectedPnlInput.addEventListener('input', () => { activeTargetMode = 'pnl'; updateDashboard(); });
 
-    // 🌟 全新重構的強大 PnL 算法：解決代數推算與做空反向問題
+    // 🌟 全新重構的強大 PnL 算法
     function calculatePnl(visibleRecords, symAvgPrice, symCost) {
       if(!els.pnlResult) return;
       if (!visibleRecords || visibleRecords.length === 0 || symAvgPrice <= 0) { 
@@ -2965,7 +2993,6 @@
     if(els.singleCostInput) els.singleCostInput.addEventListener('input', () => calculateSingleTrade());
     if(els.singleQtyInput) els.singleQtyInput.addEventListener('input', () => calculateSingleTrade());
 
-    // 🌟 修正：將手動輸入直接綁定到新的核心函數，並確保同時刷新下方的當前倉位列表！
     if(els.currentPriceDisp) els.currentPriceDisp.addEventListener('input', () => {
       updateDashboard();
       if (activeRecordsTab === 'current') renderTable();
@@ -3130,11 +3157,11 @@
 
       els.recordsTableBody.innerHTML = records.map((r, index) => {
         // 🌟 列表資料也套用隱私遮罩 (唯獨價位不遮蔽)
-        const dispQty = maskText(formatNumber(r.quantity));
+        const dispQty = maskText(formatNumber(r.quantity), 'curr_qty_' + r.id);
         const dispPrice = formatNumber(r.price, 4); // 🌟 移除 maskText，讓價位始終顯示
-        const dispCost = maskText(formatNumber(r.cost));
+        const dispCost = maskText(formatNumber(r.cost), 'curr_cost_' + r.id);
         
-        let pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 text-slate-500 text-[10px] md:text-sm">${maskText('-')}</td>`;
+        let pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 text-slate-500 text-[10px] md:text-sm">${maskText('-', 'curr_pnl_none_' + r.id)}</td>`;
         let priceDiffHtml = '';
         const isShort = r.direction === 'short';
         const dirHtml = isShort ? '<span class="text-[#ff5252] bg-[#ff5252]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">空</span>' : '<span class="text-[#00e676] bg-[#00e676]/10 px-1 py-0.5 rounded text-[8px] md:text-[9px] ml-1">多</span>';
@@ -3150,8 +3177,8 @@
           const color = rowPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
           const sign = rowPnl > 0 ? '+' : '';
           
-          const dispRowPnl = maskText(`${sign}${formatNumber(rowPnl)}`);
-          const dispRowPnlPct = maskText(`${sign}${formatNumber(rowPnlPct)}%`);
+          const dispRowPnl = maskText(`${sign}${formatNumber(rowPnl)}`, 'curr_pnl_amt_' + r.id);
+          const dispRowPnlPct = maskText(`${sign}${formatNumber(rowPnlPct)}%`, 'curr_pnl_pct_' + r.id);
           pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold text-[10px] md:text-sm ${color}">${dispRowPnl} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${dispRowPnlPct})</span></td>`;
           
           const diffPerShare = (currentPrice - r.price);
@@ -3226,7 +3253,7 @@
             currentMonthStr = monthStr;
           }
 
-          let pnlHtml = `<span class="text-slate-600">${maskText('-')}</span>`;
+          let pnlHtml = `<span class="text-slate-600">${maskText('-', 'hist_pnl_none_' + r.id)}</span>`;
           let priceDiffHtml = '';
           const sPrice = parseFloat(r.sellPrice);
           const isShort = r.direction === 'short';
@@ -3234,7 +3261,7 @@
           
           const newBadge = index === 0 ? '<span class="ml-1 md:ml-2 text-[#ff5252] text-[8px] md:text-[9px] font-black italic tracking-wider animate-pulse drop-shadow-[0_0_5px_rgba(255,82,82,0.8)]">NEW</span>' : '';
           
-          const dispQty = maskText(formatNumber(r.quantity));
+          const dispQty = maskText(formatNumber(r.quantity), 'hist_qty_' + r.id);
           const dispPrice = formatNumber(r.price, 4); // 🌟 移除 maskText，讓買入價始終顯示
 
           if (!isNaN(sPrice)) {
@@ -3244,14 +3271,14 @@
             const color = pnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
             const sign = pnl > 0 ? '+' : '';
             
-            const dispPnl = maskText(`${sign}${formatNumber(pnl)}`);
-            const dispPnlPct = maskText(`${sign}${formatNumber(pnlPct)}%`);
+            const dispPnl = maskText(`${sign}${formatNumber(pnl)}`, 'hist_pnl_amt_' + r.id);
+            const dispPnlPct = maskText(`${sign}${formatNumber(pnlPct)}%`, 'hist_pnl_pct_' + r.id);
             pnlHtml = `<span class="font-bold ${color}">${dispPnl} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${dispPnlPct})</span></span>`;
             
             const diffPerShare = (sPrice - r.price);
             const diffSign = diffPerShare > 0 ? '+' : '';
             const dispDiff = `${diffSign}${formatNumber(diffPerShare, 2)}`;
-            priceDiffHtml = `<div class="text-[8px] md:text-[9px] font-bold mt-0.5 ${color}" title="每股價差">(${dispDiff})</div>`;
+            priceDiffHtml = `<span class="text-[8px] md:text-[9px] font-bold ml-1.5 shrink-0 ${color}" title="每股價差">(${dispDiff})</span>`;
           }
           
           // 在隱私模式下，針對歷史賣價與手續費輸入框也作類型變更處理，掩蓋數字
@@ -3267,9 +3294,11 @@
             </td>
             <td class="px-1.5 md:px-4 py-1.5 md:py-3 whitespace-nowrap">${dispQty}</td>
             <td class="px-1.5 md:px-4 py-1.5 md:py-3 text-slate-300 whitespace-nowrap">$${dispPrice}</td>
-            <td class="px-1 md:px-2 py-1 md:py-2 text-center">
-              <input type="${inputType}" step="any" placeholder="-" value="${r.sellPrice != null ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center font-mono tracking-widest" title="輸入賣出價">
-              ${priceDiffHtml}
+            <td class="px-1 md:px-2 py-1 md:py-2">
+              <div class="flex items-center justify-center">
+                <input type="${inputType}" step="any" placeholder="-" value="${r.sellPrice != null ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 shrink-0 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center font-mono tracking-widest" title="輸入賣出價">
+                ${priceDiffHtml}
+              </div>
             </td>
             <td class="px-1 md:px-2 py-1 md:py-2 text-center">
               <input type="${inputType}" step="any" placeholder="-" value="${r.fee != null ? r.fee : ''}" onchange="updateHistoryTrade('${r.id}', 'fee', this.value)" class="w-10 md:w-14 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center font-mono tracking-widest" title="輸入手續費">
