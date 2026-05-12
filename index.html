@@ -837,6 +837,9 @@
     // 🌟 單點解鎖記憶集
     let unlockedMasks = new Set();
     
+    // 🌟 髒檢查記錄
+    let lastKnownStateStr = ''; 
+    
     window.toggleDashboardMop = function() {
         isDashboardMop = !isDashboardMop;
         updateDashboard();
@@ -1093,6 +1096,21 @@
 
     window.commitDataChange = function(isFromCloud = false) {
       if (tradeHistory && tradeHistory.length > 0) syncDateStrWithTime(tradeHistory);
+
+      // 🌟 髒檢查 (Dirty Checking)：確認核心資料是否真有改變，避免舊資料覆寫雲端
+      const currentStateStr = JSON.stringify({ records, tradeHistory, savedTickers, priceAlerts });
+      if (currentStateStr === lastKnownStateStr) {
+          updateDashboard();
+          if (activeRecordsTab === 'current') renderTable();
+          else if (activeRecordsTab === 'history') renderHistoryTable();
+          else if (activeRecordsTab === 'report') renderReport();
+          else if (activeRecordsTab === 'details') renderDetails();
+          renderAlerts();
+          renderTickerDropdown();
+          return;
+      }
+      
+      lastKnownStateStr = currentStateStr;
 
       localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify({records, ticker: els.tickerInput ? els.tickerInput.value : ''}));
       localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(tradeHistory));
@@ -3328,7 +3346,7 @@
             <td class="px-1.5 md:px-4 py-1.5 md:py-3 text-slate-300 whitespace-nowrap">$${dispPrice}</td>
             <td class="px-1 md:px-2 py-1 md:py-2">
               <div class="flex flex-col items-center justify-center">
-                <input type="${inputType}" step="any" placeholder="-" value="${r.sellPrice != null ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center font-mono tracking-widest" title="輸入賣出價">
+                <input type="${inputType}" step="any" placeholder="-" value="${r.sellPrice != null ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 shrink-0 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center font-mono tracking-widest" title="輸入賣出價">
                 ${priceDiffHtml}
               </div>
             </td>
