@@ -212,6 +212,46 @@
     </div>
   </div>
 
+  <!-- 🌟 新增：平倉/部分平倉專用 Modal -->
+  <div id="closePositionModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-[#1e1e1e] border border-[#333] p-5 md:p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-auto max-h-[85vh] overflow-y-auto custom-scrollbar">
+      <h3 class="text-white font-bold mb-4 text-lg shrink-0 flex items-center">💸 賣出 / 平倉</h3>
+      <form id="closePositionForm" class="space-y-3">
+        <input type="hidden" id="cpId">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="col-span-2 flex justify-between text-slate-300 text-[11px] font-bold bg-[#2a2a2a] p-2.5 rounded-lg border border-[#444] shadow-inner">
+            <span id="cpSymbolDisp" class="text-[#2979ff] text-xs"></span>
+            <span>成本價: <span id="cpBuyPriceDisp" class="text-white"></span></span>
+            <span>可平倉: <span id="cpMaxQtyDisp" class="text-white"></span></span>
+          </div>
+          <div class="col-span-2">
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">交易日期</label>
+            <input type="date" id="cpDate" required class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-[#ff5252] mb-1">賣出數量</label>
+            <input type="number" step="any" id="cpSellQty" required class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#ff5252] outline-none transition-colors">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-[#00e676] mb-1">賣出價</label>
+            <input type="number" step="any" id="cpSellPrice" required class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#00e676] outline-none transition-colors">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">手續費 / 稅金</label>
+            <input type="number" step="any" id="cpFee" placeholder="選填，預設為 0" class="w-full px-3 py-2 text-sm rounded-lg bg-[#2a2a2a] border border-[#444] text-white focus:border-[#2979ff] outline-none">
+          </div>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-3 bg-slate-800/50 p-2 rounded border border-[#333]">
+          💡 <b>自動拆單機制：</b>若「賣出數量」小於全部庫存，系統會自動結算賣出部分並留存剩餘倉位。
+        </div>
+        <div class="flex justify-end space-x-3 mt-4 pt-2 border-t border-[#333]">
+          <button type="button" onclick="closeClosePositionModal()" class="px-4 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-white hover:bg-[#333] transition-colors">取消</button>
+          <button type="submit" class="px-4 py-2 rounded-lg text-sm font-bold bg-[#ff5252] hover:bg-[#ff1744] text-white transition-colors shadow-lg flex items-center">確認賣出</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- 解除寬度限制：採用 max-w-[1600px] 大版面設計 -->
   <div class="max-w-[1600px] w-[99%] md:w-[96%] mx-auto space-y-2 md:space-y-4">
     
@@ -363,6 +403,32 @@
               <input id="expectedPnlInput" type="number" step="any" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444] disabled:opacity-40" disabled>
             </div>
             <div id="pnlResult" class="hidden mt-2 space-y-2"></div>
+            
+            <!-- 🌟 新增：當前持倉參考區塊 -->
+            <div class="mt-3 pt-3 border-t border-[#333] space-y-2">
+              <div class="text-[11px] font-bold text-slate-400 mb-1">💼 當前持倉摘要</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444]">
+                  <div class="text-[9px] text-slate-500">股票 / 股數</div>
+                  <div class="font-bold text-white text-xs truncate"><span id="targetSymDisp">-</span> <span class="text-[10px] text-slate-400 ml-1" id="targetQtyDisp">0</span></div>
+                </div>
+                <div class="bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444]">
+                  <div class="text-[9px] text-slate-500">平均成本 (倉位)</div>
+                  <div class="font-bold text-white text-xs truncate" id="targetAvgCostDisp">-</div>
+                </div>
+                <div class="bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444]">
+                  <div class="text-[9px] text-slate-500">持倉總值 (現值)</div>
+                  <div class="font-bold text-[#2979ff] text-xs truncate" id="targetTotalValDisp">-</div>
+                </div>
+                <div class="bg-[#1e1e1e] p-1.5 rounded-lg border border-[#00e676]/50 shadow-inner relative">
+                  <div class="text-[9px] text-[#00e676] font-bold flex justify-between">
+                    <span>現時股價</span>
+                    <span class="opacity-70">✏️</span>
+                  </div>
+                  <input type="number" step="any" id="targetCurrentPriceInput" class="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:ring-0 outline-none mt-0.5 placeholder-slate-600" placeholder="手動修改...">
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Tab: 單筆計算 (🌟更新：支援三向計算) -->
@@ -1053,7 +1119,8 @@
             if (els.currentPriceDisp) els.currentPriceDisp.style.color = c;
 
             visibleRecords.forEach(r => {
-                const diff = (v - r.price);
+                const isShort = r.direction === 'short';
+                const diff = isShort ? (r.price - v) : (v - r.price);
                 totalPnl += diff * r.quantity;
             });
             const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
@@ -1092,6 +1159,27 @@
         }
 
         calculatePnl(visibleRecords, symAvgPrice, symCost); 
+        
+        // 🌟 更新「當前持倉摘要」區塊
+        if(els.targetSymDisp) els.targetSymDisp.textContent = currentSym || '-';
+        if(els.targetQtyDisp) els.targetQtyDisp.innerHTML = maskText(formatNumber(symShares), 'tgt_qty');
+        if(els.targetAvgCostDisp) els.targetAvgCostDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'tgt_avg');
+        if(els.targetTotalValDisp) els.targetTotalValDisp.innerHTML = maskText(prefix + formatNumber(totalValue * multiplier), 'tgt_val');
+        
+        if(els.targetCurrentPriceInput && document.activeElement !== els.targetCurrentPriceInput) {
+            els.targetCurrentPriceInput.value = valStr;
+        }
+    }
+
+    // 🌟 同步更新：讓 targetCurrentPriceInput 也能觸發 updateDashboard
+    if(els.targetCurrentPriceInput) {
+      els.targetCurrentPriceInput.addEventListener('input', (e) => {
+        if(els.currentPriceDisp) {
+          els.currentPriceDisp.value = e.target.value;
+          updateDashboard();
+          if (activeRecordsTab === 'current') renderTable();
+        }
+      });
     }
 
     window.commitDataChange = function(isFromCloud = false) {
@@ -1232,6 +1320,14 @@
       percentInput: document.getElementById('percentInput'),
       expectedPnlInput: document.getElementById('expectedPnlInput'),
       pnlResult: document.getElementById('pnlResult'),
+      
+      // Target Current Details
+      targetSymDisp: document.getElementById('targetSymDisp'),
+      targetQtyDisp: document.getElementById('targetQtyDisp'),
+      targetAvgCostDisp: document.getElementById('targetAvgCostDisp'),
+      targetTotalValDisp: document.getElementById('targetTotalValDisp'),
+      targetCurrentPriceInput: document.getElementById('targetCurrentPriceInput'),
+
       singleCostInput: document.getElementById('singleCostInput'),
       singleSellInput: document.getElementById('singleSellInput'),
       singlePctInput: document.getElementById('singlePctInput'),
@@ -1352,7 +1448,16 @@
       detailsUpdateTime: document.getElementById('detailsUpdateTime'),
       detailsListContainer: document.getElementById('detailsListContainer'),
       btnFilterProfit: document.getElementById('btnFilterProfit'),
-      btnFilterLoss: document.getElementById('btnFilterLoss')
+      btnFilterLoss: document.getElementById('btnFilterLoss'),
+      
+      // 🌟 平倉 Modal 相關
+      closePositionModal: document.getElementById('closePositionModal'),
+      closePositionForm: document.getElementById('closePositionForm'),
+      cpId: document.getElementById('cpId'),
+      cpDate: document.getElementById('cpDate'),
+      cpSellQty: document.getElementById('cpSellQty'),
+      cpSellPrice: document.getElementById('cpSellPrice'),
+      cpFee: document.getElementById('cpFee')
     };
 
     // --- 輔助：智慧 API 額度提示 ---
@@ -1696,6 +1801,122 @@
         }
       });
     });
+
+    // 🌟 平倉 / 部分平倉 核心邏輯 🌟
+    window.openClosePositionModal = function(id) {
+        const rec = records.find(r => r.id === id);
+        if(!rec) return;
+        
+        els.cpId.value = rec.id;
+        document.getElementById('cpSymbolDisp').textContent = rec.ticker + (rec.direction === 'short' ? ' (做空)' : ' (做多)');
+        document.getElementById('cpBuyPriceDisp').textContent = formatNumber(rec.price, 4);
+        document.getElementById('cpMaxQtyDisp').textContent = formatNumber(rec.quantity);
+        
+        els.cpDate.value = getLocalDateString();
+        els.cpSellQty.value = rec.quantity;
+        els.cpSellQty.max = rec.quantity;
+        
+        const currentSym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
+        const currentPrice = els.currentPriceDisp ? parseFloat(els.currentPriceDisp.value) : NaN;
+        els.cpSellPrice.value = (rec.ticker === currentSym && !isNaN(currentPrice)) ? currentPrice : '';
+        els.cpFee.value = '';
+
+        els.closePositionModal.classList.remove('hidden');
+        els.closePositionModal.classList.add('flex');
+    };
+
+    window.closeClosePositionModal = function() {
+        els.closePositionModal.classList.add('hidden');
+        els.closePositionModal.classList.remove('flex');
+    };
+
+    if(els.closePositionForm) {
+      els.closePositionForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = els.cpId.value;
+        const sellQty = parseFloat(els.cpSellQty.value);
+        const sellPrice = parseFloat(els.cpSellPrice.value);
+        const fee = els.cpFee.value ? parseFloat(els.cpFee.value) : 0;
+        const dateVal = els.cpDate.value;
+        
+        const recIndex = records.findIndex(r => r.id === id);
+        if(recIndex === -1) return;
+        const rec = records[recIndex];
+        
+        if (sellQty <= 0 || sellQty > rec.quantity) {
+            return showToast('賣出數量錯誤，不可大於可平倉數量', 'error');
+        }
+
+        const isFullClose = (sellQty === rec.quantity);
+        const dateObj = new Date(dateVal);
+        const timeStr = dateObj.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'});
+        const newHistoryId = Date.now().toString() + 'h';
+
+        // 如果不是模擬單，則連動處理歷史紀錄
+        if (!rec.isMock) {
+            // 尋找對應的買入歷史紀錄 (Original Buy Ledger)
+            let histRec = tradeHistory.find(h => h.id === rec.id + 'h');
+            if (!histRec) { 
+                const editIdNum = parseInt(rec.id.replace(/\D/g, '')) || 0;
+                histRec = tradeHistory.find(h => 
+                    h.ticker === rec.ticker && 
+                    h.price === rec.price && 
+                    h.direction === rec.direction &&
+                    Math.abs(parseInt(h.id) - editIdNum) < 5000 &&
+                    h.sellPrice == null // 確保它是尚未平倉的原始紀錄
+                );
+            }
+
+            if (isFullClose) {
+                if (histRec && histRec.sellPrice == null) {
+                    histRec.sellPrice = sellPrice;
+                    histRec.fee = fee;
+                    histRec.dateStr = dateVal;
+                    histRec.time = timeStr;
+                    // 將其移到最前面
+                    tradeHistory = tradeHistory.filter(h => h.id !== histRec.id);
+                    tradeHistory.unshift(histRec);
+                } else {
+                    tradeHistory.unshift({
+                        id: newHistoryId, time: timeStr, dateStr: dateVal,
+                        ticker: rec.ticker, price: rec.price, quantity: sellQty,
+                        sellPrice: sellPrice, fee: fee, direction: rec.direction || 'long'
+                    });
+                }
+            } else {
+                // 部分平倉 (拆單)
+                if (histRec && histRec.sellPrice == null) {
+                    histRec.quantity -= sellQty; // 原本買單數量減少
+                }
+                // 產生一筆新的「已平倉」歷史紀錄
+                tradeHistory.unshift({
+                    id: newHistoryId, time: timeStr, dateStr: dateVal,
+                    ticker: rec.ticker, price: rec.price, quantity: sellQty,
+                    sellPrice: sellPrice, fee: fee, direction: rec.direction || 'long'
+                });
+            }
+        }
+
+        // 更新當前倉位
+        if (isFullClose) {
+            records.splice(recIndex, 1);
+        } else {
+            rec.quantity -= sellQty;
+            rec.cost = rec.price * rec.quantity;
+        }
+
+        tradeHistory.sort((a,b) => {
+            let timeA = a.dateStr ? new Date(a.dateStr).getTime() : parseInt(a.id);
+            let timeB = b.dateStr ? new Date(b.dateStr).getTime() : parseInt(b.id);
+            if (timeA === timeB) return parseInt(b.id) - parseInt(a.id);
+            return timeB - timeA; 
+        });
+
+        commitDataChange();
+        closeClosePositionModal();
+        showToast(isFullClose ? '✅ 倉位已全數平倉結算' : `✅ 已成功部分平倉 ${sellQty} 股`, 'success');
+      });
+    }
 
     // --- 桌面通知 (Browser Notification) ---
     function requestNotificationPermission() {
@@ -3252,6 +3473,9 @@
           <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-[10px] md:text-sm text-slate-400">$${dispCost}</td>
           ${pnlHtml}
           <td class="px-1.5 py-1.5 md:px-6 md:py-3 text-right whitespace-nowrap">
+            <button onclick="openClosePositionModal('${r.id}')" class="text-emerald-500 hover:text-emerald-400 mr-1.5 md:mr-3 scale-90 md:scale-100 transition-colors" title="賣出 / 平倉">
+              💸
+            </button>
             <button onclick="toggleHideRecord('${r.id}')" class="text-slate-400 hover:text-white mr-1.5 md:mr-3 scale-90 md:scale-100 transition-colors" title="${r.isHidden ? '取消隱藏' : '暫時排除於總額計算外'}">
               ${r.isHidden ? svgIconEyeOff : svgIconEye}
             </button>
