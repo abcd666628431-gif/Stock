@@ -403,32 +403,6 @@
               <input id="expectedPnlInput" type="number" step="any" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444] disabled:opacity-40" disabled>
             </div>
             <div id="pnlResult" class="hidden mt-2 space-y-2"></div>
-            
-            <!-- 🌟 新增：當前持倉參考區塊 -->
-            <div class="mt-3 pt-3 border-t border-[#333] space-y-2">
-              <div class="text-[11px] font-bold text-slate-400 mb-1">💼 當前持倉摘要</div>
-              <div class="grid grid-cols-2 gap-2">
-                <div class="bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444]">
-                  <div class="text-[9px] text-slate-500">股票 / 股數</div>
-                  <div class="font-bold text-white text-xs truncate"><span id="targetSymDisp">-</span> <span class="text-[10px] text-slate-400 ml-1" id="targetQtyDisp">0</span></div>
-                </div>
-                <div class="bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444]">
-                  <div class="text-[9px] text-slate-500">平均成本 (倉位)</div>
-                  <div class="font-bold text-white text-xs truncate" id="targetAvgCostDisp">-</div>
-                </div>
-                <div class="bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444]">
-                  <div class="text-[9px] text-slate-500">持倉總值 (現值)</div>
-                  <div class="font-bold text-[#2979ff] text-xs truncate" id="targetTotalValDisp">-</div>
-                </div>
-                <div class="bg-[#1e1e1e] p-1.5 rounded-lg border border-[#00e676]/50 shadow-inner relative">
-                  <div class="text-[9px] text-[#00e676] font-bold flex justify-between">
-                    <span>現時股價</span>
-                    <span class="opacity-70">✏️</span>
-                  </div>
-                  <input type="number" step="any" id="targetCurrentPriceInput" class="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:ring-0 outline-none mt-0.5 placeholder-slate-600" placeholder="手動修改...">
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- Tab: 單筆計算 (🌟更新：支援三向計算) -->
@@ -1159,27 +1133,6 @@
         }
 
         calculatePnl(visibleRecords, symAvgPrice, symCost); 
-        
-        // 🌟 更新「當前持倉摘要」區塊
-        if(els.targetSymDisp) els.targetSymDisp.textContent = currentSym || '-';
-        if(els.targetQtyDisp) els.targetQtyDisp.innerHTML = maskText(formatNumber(symShares), 'tgt_qty');
-        if(els.targetAvgCostDisp) els.targetAvgCostDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'tgt_avg');
-        if(els.targetTotalValDisp) els.targetTotalValDisp.innerHTML = maskText(prefix + formatNumber(totalValue * multiplier), 'tgt_val');
-        
-        if(els.targetCurrentPriceInput && document.activeElement !== els.targetCurrentPriceInput) {
-            els.targetCurrentPriceInput.value = valStr;
-        }
-    }
-
-    // 🌟 同步更新：讓 targetCurrentPriceInput 也能觸發 updateDashboard
-    if(els.targetCurrentPriceInput) {
-      els.targetCurrentPriceInput.addEventListener('input', (e) => {
-        if(els.currentPriceDisp) {
-          els.currentPriceDisp.value = e.target.value;
-          updateDashboard();
-          if (activeRecordsTab === 'current') renderTable();
-        }
-      });
     }
 
     window.commitDataChange = function(isFromCloud = false) {
@@ -1320,14 +1273,6 @@
       percentInput: document.getElementById('percentInput'),
       expectedPnlInput: document.getElementById('expectedPnlInput'),
       pnlResult: document.getElementById('pnlResult'),
-      
-      // Target Current Details
-      targetSymDisp: document.getElementById('targetSymDisp'),
-      targetQtyDisp: document.getElementById('targetQtyDisp'),
-      targetAvgCostDisp: document.getElementById('targetAvgCostDisp'),
-      targetTotalValDisp: document.getElementById('targetTotalValDisp'),
-      targetCurrentPriceInput: document.getElementById('targetCurrentPriceInput'),
-
       singleCostInput: document.getElementById('singleCostInput'),
       singleSellInput: document.getElementById('singleSellInput'),
       singlePctInput: document.getElementById('singlePctInput'),
