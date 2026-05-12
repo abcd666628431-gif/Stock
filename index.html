@@ -365,7 +365,7 @@
             <div id="pnlResult" class="hidden mt-2 space-y-2"></div>
           </div>
 
-          <!-- Tab: 單筆計算 -->
+          <!-- Tab: 單筆計算 (🌟更新：支援三向計算) -->
           <div id="tab-single" class="hidden space-y-2 px-1 pb-1">
             <div class="grid grid-cols-2 gap-2">
               <div>
@@ -386,6 +386,10 @@
                   <input id="singlePctInput" type="number" step="any" class="w-full pl-3 pr-7 py-1.5 text-sm font-bold rounded-lg border border-[#444] ">
                   <span class="absolute right-2.5 text-slate-400 text-sm font-bold pointer-events-none">%</span>
                 </div>
+              </div>
+              <div class="col-span-2">
+                <label class="block text-[11px] font-bold text-[#2979ff] mb-1">目標盈虧金額 (需填股數)</label>
+                <input id="singlePnlInput" type="number" step="any" placeholder="輸入預期盈虧，例如 500 或 -200" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444] focus:border-[#2979ff] placeholder-slate-500">
               </div>
             </div>
             <div id="singleResult" class="hidden mt-2 p-2 rounded-lg border border-[#555] text-sm bg-[#2a2a2a]"></div>
@@ -1214,6 +1218,7 @@
       singleSellInput: document.getElementById('singleSellInput'),
       singlePctInput: document.getElementById('singlePctInput'),
       singleQtyInput: document.getElementById('singleQtyInput'),
+      singlePnlInput: document.getElementById('singlePnlInput'),
       singleResult: document.getElementById('singleResult'),
       
       // Alerts & Volatility
@@ -2954,13 +2959,14 @@
     let activeSingleMode = 'sell';
 
     function calculateSingleTrade(source) {
-      if(!els.singleCostInput || !els.singleSellInput || !els.singlePctInput || !els.singleQtyInput || !els.singleResult) return;
+      if(!els.singleCostInput || !els.singleSellInput || !els.singlePctInput || !els.singleQtyInput || !els.singlePnlInput || !els.singleResult) return;
       
       if (source) activeSingleMode = source;
 
       const c = parseFloat(els.singleCostInput.value);
       let s = parseFloat(els.singleSellInput.value);
       let pct = parseFloat(els.singlePctInput.value);
+      let pnl = parseFloat(els.singlePnlInput.value);
       const q = parseFloat(els.singleQtyInput.value);
 
       if (isNaN(c)) {
@@ -2968,20 +2974,43 @@
          return;
       }
 
-      // 雙向計算：輸入%推賣價，輸入賣價推%
+      // 三向計算：輸入%推賣價與盈虧、輸入賣價推%與盈虧、輸入盈虧推賣價與%
       if (activeSingleMode === 'pct' && !isNaN(pct)) {
          s = c * (1 + pct / 100);
          els.singleSellInput.value = parseFloat(s.toFixed(4));
+         if (!isNaN(q) && q > 0) {
+             pnl = (s - c) * q;
+             els.singlePnlInput.value = parseFloat(pnl.toFixed(2));
+         } else {
+             els.singlePnlInput.value = '';
+         }
       } else if (activeSingleMode === 'sell' && !isNaN(s)) {
          pct = ((s - c) / c) * 100;
          els.singlePctInput.value = parseFloat(pct.toFixed(2));
+         if (!isNaN(q) && q > 0) {
+             pnl = (s - c) * q;
+             els.singlePnlInput.value = parseFloat(pnl.toFixed(2));
+         } else {
+             els.singlePnlInput.value = '';
+         }
+      } else if (activeSingleMode === 'pnl' && !isNaN(pnl)) {
+         if (!isNaN(q) && q > 0) {
+             s = c + (pnl / q);
+             els.singleSellInput.value = parseFloat(s.toFixed(4));
+             pct = ((s - c) / c) * 100;
+             els.singlePctInput.value = parseFloat(pct.toFixed(2));
+         } else {
+             els.singleSellInput.value = '';
+             els.singlePctInput.value = '';
+             s = NaN;
+         }
       }
 
       if (!isNaN(c) && !isNaN(s)) {
         els.singleResult.classList.remove('hidden');
         const d = s - c, p = (d / c) * 100, color = d >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
         let h = `<div class="flex justify-between"><span class="text-slate-200 font-medium">價差</span><span class="font-bold ${color}">${d >= 0 ? '+' : ''}${formatNumber(d, 4)}</span></div><div class="flex justify-between mt-1"><span class="text-slate-200 font-medium">報酬</span><span class="font-bold ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}%</span></div>`;
-        if (q > 0) h += `<div class="mt-2 pt-2 border-t border-[#555] flex justify-between"><span class="font-bold text-slate-200">總計損益</span><span class="font-bold text-sm ${color}">${d >= 0 ? '+' : ''}${formatNumber(d * q)}</span></div>`;
+        if (!isNaN(q) && q > 0) h += `<div class="mt-2 pt-2 border-t border-[#555] flex justify-between"><span class="font-bold text-slate-200">總計損益</span><span class="font-bold text-sm ${color}">${d >= 0 ? '+' : ''}${formatNumber(d * q)}</span></div>`;
         els.singleResult.innerHTML = h;
       } else {
         els.singleResult.classList.add('hidden');
@@ -2990,6 +3019,7 @@
 
     if(els.singleSellInput) els.singleSellInput.addEventListener('input', () => calculateSingleTrade('sell'));
     if(els.singlePctInput) els.singlePctInput.addEventListener('input', () => calculateSingleTrade('pct'));
+    if(els.singlePnlInput) els.singlePnlInput.addEventListener('input', () => calculateSingleTrade('pnl'));
     if(els.singleCostInput) els.singleCostInput.addEventListener('input', () => calculateSingleTrade());
     if(els.singleQtyInput) els.singleQtyInput.addEventListener('input', () => calculateSingleTrade());
 
@@ -3278,7 +3308,9 @@
             const diffPerShare = (sPrice - r.price);
             const diffSign = diffPerShare > 0 ? '+' : '';
             const dispDiff = `${diffSign}${formatNumber(diffPerShare, 2)}`;
-            priceDiffHtml = `<span class="text-[8px] md:text-[9px] font-bold ml-1.5 shrink-0 ${color}" title="每股價差">(${dispDiff})</span>`;
+            
+            // 🌟 將括號 () 移至框外右邊：
+            priceDiffHtml = `<div class="flex items-center justify-center mt-0.5"><span class="text-[8px] md:text-[9px] font-bold ${color}" title="每股價差">(${dispDiff})</span></div>`;
           }
           
           // 在隱私模式下，針對歷史賣價與手續費輸入框也作類型變更處理，掩蓋數字
@@ -3295,8 +3327,8 @@
             <td class="px-1.5 md:px-4 py-1.5 md:py-3 whitespace-nowrap">${dispQty}</td>
             <td class="px-1.5 md:px-4 py-1.5 md:py-3 text-slate-300 whitespace-nowrap">$${dispPrice}</td>
             <td class="px-1 md:px-2 py-1 md:py-2">
-              <div class="flex items-center justify-center">
-                <input type="${inputType}" step="any" placeholder="-" value="${r.sellPrice != null ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 shrink-0 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center font-mono tracking-widest" title="輸入賣出價">
+              <div class="flex flex-col items-center justify-center">
+                <input type="${inputType}" step="any" placeholder="-" value="${r.sellPrice != null ? r.sellPrice : ''}" onchange="updateHistoryTrade('${r.id}', 'sellPrice', this.value)" class="w-12 md:w-16 px-1 md:px-1.5 py-0.5 md:py-1 text-[10px] md:text-xs bg-[#1e1e1e] border border-[#444] rounded text-white outline-none focus:border-[#2979ff] hover:border-[#666] transition-colors text-center font-mono tracking-widest" title="輸入賣出價">
                 ${priceDiffHtml}
               </div>
             </td>
