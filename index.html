@@ -652,9 +652,10 @@
       </div>
 
       <!-- 右側：看板、圖表與列表 -->
+      <!-- 右側：看板、圖表與列表 -->
       <div class="flex-1 min-w-0 space-y-2 md:space-y-4">
         
-        <<!-- 🌟 全局總資產概況橫幅 -->
+        <!-- 🌟 全局總資產概況橫幅 -->
         <div class="card-panel px-3 py-2 md:px-5 md:py-3 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-3">
           <div class="flex items-center space-x-2 md:space-x-3 w-full md:w-auto shrink-0">
             <span class="text-sm md:text-base font-bold text-white tracking-wider whitespace-nowrap">總資產概況</span>
@@ -684,17 +685,13 @@
              </div>
              
              <div class="flex flex-col shrink-0 pointer-events-none items-end min-w-[90px]">
-                   <span class="text-[9px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
-                   <div id="globalTotalPnlContainer" class="flex flex-col items-end">
-                      <span class="text-xs md:text-sm font-bold leading-none text-slate-500">-</span>
-                   </div>
-                 </div>
-        <!-- 核心看板 (極限壓縮為一行 5 欄) -->
-
-<!-- ✅ 正確的寫法必須有這兩個閉合標籤： -->
-                 </div>
-              </div> <!-- 🌟 關閉 flex 容器 -->
-            </div>
+               <span class="text-[9px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
+               <div id="globalTotalPnlContainer" class="flex flex-col items-end">
+                  <span class="text-xs md:text-sm font-bold leading-none text-slate-500">-</span>
+               </div>
+             </div>
+          </div>
+        </div>
 
         <!-- 核心看板 (極限壓縮為一行 5 欄) -->
         <div class="grid grid-cols-5 gap-1 md:gap-3">
@@ -1231,13 +1228,29 @@
         const totalAssetValueMOP = totalAssetValueUSD * MOP_RATE;
         const globalPnlMOP = globalPnl * MOP_RATE;
 
+        // DOM 元素
         const globalCashInputEl = document.getElementById('globalCashInput');
-        // (舊的 globalCashDisplayTextEl 已經沒用，因為您改成了 MOP 和 USD 兩個 span)
+        const globalCashDisplayTextMOP = document.getElementById('globalCashDisplayTextMOP');
+        const globalCashDisplayTextUSD = document.getElementById('globalCashDisplayTextUSD');
+        
+        const globalStockValueMOP = document.getElementById('globalStockValueMOP');
+        const globalStockValueUSD = document.getElementById('globalStockValueUSD');
+        
+        const globalTotalAssetMOP = document.getElementById('globalTotalAssetMOP');
+        const globalTotalAssetUSD = document.getElementById('globalTotalAssetUSD');
+
+        // 🌟 更新現金顯示
+        if (globalCashInputEl && globalCashDisplayTextMOP && globalCashDisplayTextUSD) {
+            globalCashDisplayTextMOP.innerHTML = maskText(prefix + formatNumber(accountCashMOP), 'global_cash_mop');
+            globalCashDisplayTextUSD.innerHTML = maskText('(' + prefix + formatNumber(accountCash) + ')', 'global_cash_usd');
+            
+            // 輸入框維持輸入 MOP
+            if (document.activeElement !== globalCashInputEl) {
                 globalCashInputEl.value = parseFloat(accountCashMOP.toFixed(2));
             }
         }
 
-        // 更新現值與總資產
+        // 🌟 更新現值與總資產
         if (globalStockValueMOP && globalTotalAssetMOP) {
             globalStockValueMOP.innerHTML = maskText(prefix + formatNumber(stockValueMOP), 'global_stock_val_mop');
             globalStockValueUSD.innerHTML = maskText('(' + prefix + formatNumber(stockValueUSD) + ')', 'global_stock_val_usd');
@@ -1246,7 +1259,7 @@
             globalTotalAssetUSD.innerHTML = maskText('(' + prefix + formatNumber(totalAssetValueUSD) + ')', 'global_tot_asset_usd');
         }
 
-        // 🌟 新版：更新未實現盈虧 (將 MOP, USD, % 重新排版)
+        // 🌟 更新未實現盈虧 (將 MOP, USD, % 重新排版)
         const globalTotalPnlContainer = document.getElementById('globalTotalPnlContainer');
         if (globalTotalPnlContainer) {
             if (globalCost > 0) {
