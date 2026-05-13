@@ -3029,15 +3029,9 @@
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
           if (res.status === 429) {
             // 🌟 移除取消打勾，僅提示等待下次刷新
-            showToast('達 Finnhub 限制，等待下一次自動重試...', 'error'); return;
+            showToast('達 Finnhub 限制，等待下一次自動重試...', 'error'); 
+            return;
           }
-// ...(中間略，注意下面這段是在 else 的 TwelveData 判斷裡)...
-           const res = await fetch(`https://api.twelvedata.com/price?symbol=${symbol}&apikey=${TWELVE_DATA_API_KEY}`);
-           const data = await res.json();
-           if (data.code === 429) {
-              // 🌟 移除取消打勾，僅提示等待下次刷新
-              showToast(`達 TwelveData 限制，等待下一次自動重試...`, 'error'); return;
-           }
           const data = await res.json();
           if (data && data.c) { 
             latestPrices[symbol] = data.c;
@@ -3056,9 +3050,9 @@
            const res = await fetch(`https://api.twelvedata.com/price?symbol=${symbol}&apikey=${TWELVE_DATA_API_KEY}`);
            const data = await res.json();
            if (data.code === 429) {
-              if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = false; 
-              clearInterval(quoteInterval);
-              showToast(`自動刷新暫停：${getTwelveDataRateLimitMsg()}`, 'error'); return;
+              // 🌟 移除取消打勾，僅提示等待下次刷新
+              showToast(`達 TwelveData 限制，等待下一次自動重試...`, 'error'); 
+              return;
            }
            if (data && data.price) {
               const price = parseFloat(data.price);
