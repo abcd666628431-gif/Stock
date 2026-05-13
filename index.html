@@ -888,6 +888,9 @@
     let isDashboardMop = false;
     const MOP_RATE = 8;
     
+    // 🌟 全局最新價格快取：記住每個代號被抓取過的最新的價格
+    let latestPrices = JSON.parse(localStorage.getItem('stockCalcPrices_PRO')) || {};
+    
     // 🌟 單點解鎖記憶集
     let unlockedMasks = new Set();
     
@@ -1518,7 +1521,8 @@
           twelvedata: localStorage.getItem(STORAGE_KEY_TWELVEDATA),
           alerts: localStorage.getItem(STORAGE_KEY_ALERTS),
           volume: localStorage.getItem('stockCalcVolume_PRO'),
-          customSound: localStorage.getItem('stockCalcCustomSound_PRO')
+          customSound: localStorage.getItem('stockCalcCustomSound_PRO'),
+          prices: localStorage.getItem('stockCalcPrices_PRO')
         };
         
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
@@ -1584,6 +1588,12 @@
                   alertAudio.src = defaultSoundUrl;
                   localStorage.removeItem('stockCalcCustomSound_PRO');
                 }
+                
+                if (importedObj.prices) {
+                  latestPrices = JSON.parse(importedObj.prices);
+                  localStorage.setItem('stockCalcPrices_PRO', importedObj.prices);
+                }
+                
                 updateSoundUI();
                 
                 commitDataChange(false);
@@ -1773,9 +1783,9 @@
         els.cpSellQty.value = rec.quantity;
         els.cpSellQty.max = rec.quantity;
         
-        const currentSym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
-        const currentPrice = els.currentPriceDisp ? parseFloat(els.currentPriceDisp.value) : NaN;
-        els.cpSellPrice.value = (rec.ticker === currentSym && !isNaN(currentPrice)) ? currentPrice : '';
+        // 🌟 帶入全局緩存中的最新價格
+        const savedPrice = latestPrices[rec.ticker];
+        els.cpSellPrice.value = (savedPrice !== undefined && !isNaN(savedPrice)) ? savedPrice : '';
         els.cpFee.value = '';
 
         els.closePositionModal.classList.remove('hidden');
@@ -2945,6 +2955,9 @@
           if (res.status === 429) return showToast('API 呼叫頻率過高，請稍候', 'error');
           const data = await res.json();
           if (data && data.c) { 
+            latestPrices[symbol] = data.c;
+            localStorage.setItem('stockCalcPrices_PRO', JSON.stringify(latestPrices));
+            
             if(els.currentPriceDisp) els.currentPriceDisp.value = data.c; 
             updateDashboard(); 
             if (activeRecordsTab === 'current') renderTable(); // 🌟 補回：抓取後刷新當前倉位表格
@@ -2960,6 +2973,9 @@
           
           if (data && data.price) {
             const price = parseFloat(data.price);
+            latestPrices[symbol] = price;
+            localStorage.setItem('stockCalcPrices_PRO', JSON.stringify(latestPrices));
+            
             if(els.currentPriceDisp) els.currentPriceDisp.value = price;
             updateDashboard(); 
             if (activeRecordsTab === 'current') renderTable(); // 🌟 補回：抓取後刷新當前倉位表格
@@ -2993,6 +3009,9 @@
           }
           const data = await res.json();
           if (data && data.c) { 
+            latestPrices[symbol] = data.c;
+            localStorage.setItem('stockCalcPrices_PRO', JSON.stringify(latestPrices));
+            
             if (els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== data.c) {
               els.currentPriceDisp.value = data.c; 
               updateDashboard();
@@ -3012,6 +3031,9 @@
            }
            if (data && data.price) {
               const price = parseFloat(data.price);
+              latestPrices[symbol] = price;
+              localStorage.setItem('stockCalcPrices_PRO', JSON.stringify(latestPrices));
+              
               if (els.currentPriceDisp && parseFloat(els.currentPriceDisp.value) !== price) {
                 els.currentPriceDisp.value = price; 
                 updateDashboard();
@@ -3221,6 +3243,12 @@
     if(els.singleQtyInput) els.singleQtyInput.addEventListener('input', () => calculateSingleTrade());
 
     if(els.currentPriceDisp) els.currentPriceDisp.addEventListener('input', () => {
+      const sym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
+      const val = parseFloat(els.currentPriceDisp.value);
+      if (sym && !isNaN(val)) {
+         latestPrices[sym] = val;
+         localStorage.setItem('stockCalcPrices_PRO', JSON.stringify(latestPrices));
+      }
       updateDashboard();
       if (activeRecordsTab === 'current') renderTable();
       saveUIStateLocal();
@@ -3398,11 +3426,13 @@
         const mockBadge = r.isMock ? '<span class="ml-1 text-amber-500 bg-amber-500/10 border border-amber-500/20 text-[8px] px-1 py-0.5 rounded font-bold">模擬</span>' : '';
         const hideBadge = r.isHidden ? '<span class="ml-1 text-slate-400 bg-slate-800 border border-slate-600 text-[8px] px-1 py-0.5 rounded font-bold">已隱藏</span>' : '';
         
-        // 嚴格判定：只有當前選擇的代碼才能吃到「現價」的即時盈虧顯示！
-        if (!isNaN(currentPrice) && r.ticker === currentSym) {
+        // 🌟 新增：讀取全局價格快取
+        const rowPrice = latestPrices[r.ticker];
+        
+        if (rowPrice !== undefined && !isNaN(rowPrice)) {
           // 全部統一為做多算法 (現價 - 買價)
-          const rowPnl = (currentPrice - r.price) * r.quantity;
-          const rowPnlPct = ((currentPrice - r.price) / r.price) * 100;
+          const rowPnl = (rowPrice - r.price) * r.quantity;
+          const rowPnlPct = ((rowPrice - r.price) / r.price) * 100;
           const color = rowPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
           const sign = rowPnl > 0 ? '+' : '';
           
@@ -3410,7 +3440,7 @@
           const dispRowPnlPct = maskText(`${sign}${formatNumber(rowPnlPct)}%`, 'curr_pnl_pct_' + r.id);
           pnlHtml = `<td class="px-1.5 py-1.5 md:px-6 md:py-3 font-bold text-[10px] md:text-sm ${color}">${dispRowPnl} <span class="text-[8px] md:text-[10px] opacity-70 ml-0.5 md:ml-1">(${dispRowPnlPct})</span></td>`;
           
-          const diffPerShare = (currentPrice - r.price);
+          const diffPerShare = (rowPrice - r.price);
           const diffSign = diffPerShare > 0 ? '+' : '';
           const dispDiff = `${diffSign}${formatNumber(diffPerShare, 2)}`;
           priceDiffHtml = `<span class="text-[8px] md:text-[10px] font-bold ml-1 ${color}" title="每股價差">(${dispDiff})</span>`;
