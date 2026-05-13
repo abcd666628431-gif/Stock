@@ -643,34 +643,33 @@
       <div class="flex-1 min-w-0 space-y-2 md:space-y-4">
         
         <!-- 🌟 全局總資產概況橫幅 -->
-        <div class="card-panel px-2 py-2 md:px-4 md:py-3 rounded-xl flex justify-between items-center bg-gradient-to-r from-[#1a1a2e] to-[#1e1e1e] border-l-4 border-l-[#d946ef] shadow-md transition-colors">
-          <div class="flex items-center space-x-2 md:space-x-3 cursor-pointer hover:opacity-80 group" onclick="toggleDashboardMop()" title="點擊切換 USD/MOP">
-            <div class="bg-[#d946ef]/20 p-1.5 rounded-lg text-[#d946ef] group-hover:scale-110 transition-transform">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/></svg>
-            </div>
-            <div class="flex flex-col items-start">
-               <span class="text-[11px] md:text-sm font-bold text-white tracking-wider whitespace-nowrap">總資產概況</span>
-               <span id="globalCurrencyLabel" class="text-[8px] md:text-[9px] text-[#d946ef] bg-[#d946ef]/10 px-1 rounded mt-0.5">USD</span>
-            </div>
+        <div class="card-panel px-3 py-2 md:px-5 md:py-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+          <div class="flex items-center space-x-3 w-full md:w-auto">
+            <span class="text-sm md:text-lg font-bold text-white tracking-wider whitespace-nowrap">總資產概況</span>
+            <select id="globalCurrencySelect" class="bg-[#2a2a2a] text-[#2979ff] border border-[#444] rounded px-2 py-1 text-xs outline-none focus:border-[#2979ff] shadow-sm cursor-pointer font-bold transition-colors hover:bg-[#333]">
+              <option value="USD">USD</option>
+              <option value="MOP">MOP</option>
+            </select>
           </div>
-          <div class="flex space-x-2 md:space-x-6 text-right items-center overflow-x-auto no-scrollbar pl-2">
-             <div class="flex flex-col items-end shrink-0 border-r border-[#444] pr-2 md:pr-4">
-               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">💵 帳戶現金</span>
-               <div class="flex items-center mt-0.5">
-                 <input type="number" id="globalCashInput" step="any" value="0" class="w-16 md:w-20 text-xs md:text-sm font-bold text-white bg-transparent border-b border-dashed border-[#555] hover:border-[#d946ef] focus:border-solid focus:border-[#d946ef] outline-none text-right transition-colors p-0" title="點擊修改現金">
+          
+          <div class="flex space-x-4 md:space-x-8 text-right items-center w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
+             <div class="flex flex-col items-end shrink-0 border-r border-[#444] pr-4">
+               <span class="text-[9px] md:text-xs text-slate-400 font-bold mb-1">帳戶現金</span>
+               <!-- 雙擊切換容器 -->
+               <div id="cashDisplayContainer" class="cursor-pointer group flex items-center h-[20px] md:h-[24px]" title="雙擊修改現金">
+                 <span id="globalCashDisplayText" class="text-sm md:text-lg font-bold text-white group-hover:text-[#2979ff] transition-colors border-b border-transparent group-hover:border-[#2979ff] border-dashed">$0.00</span>
                </div>
+               <input type="number" id="globalCashInput" step="any" value="0" class="hidden w-20 md:w-28 text-sm md:text-lg font-bold text-[#2979ff] bg-[#1e1e1e] border border-[#2979ff] rounded px-1 outline-none text-right shadow-inner h-[20px] md:h-[24px]">
              </div>
+             
+             <div class="flex flex-col shrink-0 border-r border-[#444] pr-4">
+               <span class="text-[9px] md:text-xs text-slate-400 font-bold mb-1">股票現值</span>
+               <span id="globalStockValue" class="text-sm md:text-lg font-bold text-slate-300 h-[20px] md:h-[24px] flex items-center justify-end">$0.00</span>
+             </div>
+             
              <div class="flex flex-col shrink-0">
-               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">📦 股票現值</span>
-               <span id="globalStockValue" class="text-xs md:text-sm font-bold text-white mt-0.5">$0.00</span>
-             </div>
-             <div class="flex flex-col shrink-0">
-               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">💰 總資產淨值</span>
-               <span id="globalTotalAsset" class="text-xs md:text-sm font-bold text-[#d946ef] drop-shadow-[0_0_5px_rgba(217,70,239,0.3)] mt-0.5">$0.00</span>
-             </div>
-             <div class="flex flex-col shrink-0 pl-1 md:pl-2 border-l border-[#444]">
-               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">未實現總盈虧</span>
-               <span id="globalTotalPnl" class="text-xs md:text-sm font-bold mt-0.5">-</span>
+               <span class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">總資產淨值</span>
+               <span id="globalTotalAsset" class="text-base md:text-2xl font-black text-white h-[20px] md:h-[24px] flex items-center justify-end">$0.00</span>
              </div>
           </div>
         </div>
@@ -917,8 +916,10 @@
     // 🌟 全局隱私保護模式狀態
     let isPrivacyMode = localStorage.getItem('stockCalcPrivacy_PRO') === 'true';
 
-    // 🌟 總成本 MOP 顯示切換變數
+    // 🌟 單股面板 USD/MOP 切換
     let isDashboardMop = false;
+    // 🌟 全局資產概況 USD/MOP 切換
+    let isGlobalMop = false;
     const MOP_RATE = 8;
     
     // 🌟 全局最新價格快取：記住每個代號被抓取過的最新的價格
@@ -1206,35 +1207,25 @@
 
         const globalStockValueEl = document.getElementById('globalStockValue');
         const globalTotalAssetEl = document.getElementById('globalTotalAsset');
-        const globalTotalPnlEl = document.getElementById('globalTotalPnl');
-        const globalCurrencyLabelEl = document.getElementById('globalCurrencyLabel');
         const globalCashInputEl = document.getElementById('globalCashInput');
+        const globalCashDisplayTextEl = document.getElementById('globalCashDisplayText');
 
-        // 處理輸入框隱私模式遮罩與 USD/MOP 匯率切換
-        if (globalCashInputEl) {
-            globalCashInputEl.type = isPrivacyMode ? 'password' : 'number';
-            // 🌟 核心：切換幣別時，自動更新輸入框內的數值 (若使用者正在輸入則跳過，以免干擾游標)
+        // 🌟 獨立的全局匯率乘數
+        const globalMultiplier = isGlobalMop ? MOP_RATE : 1;
+
+        if (globalCashInputEl && globalCashDisplayTextEl) {
+            // 文字顯示模式 (支援隱私遮罩)
+            globalCashDisplayTextEl.innerHTML = maskText(prefix + formatNumber(accountCash * globalMultiplier), 'global_cash');
+            
+            // 確保輸入框內的數值正確，但如果使用者正在打字則不覆蓋
             if (document.activeElement !== globalCashInputEl) {
-                globalCashInputEl.value = parseFloat((accountCash * multiplier).toFixed(2));
+                globalCashInputEl.value = parseFloat((accountCash * globalMultiplier).toFixed(2));
             }
         }
 
-        if (globalStockValueEl && globalTotalAssetEl && globalTotalPnlEl) {
-            if (globalCurrencyLabelEl) globalCurrencyLabelEl.textContent = isDashboardMop ? 'MOP' : 'USD';
-            
-            globalStockValueEl.innerHTML = maskText(prefix + formatNumber(stockValue * multiplier), 'global_stock_val');
-            globalTotalAssetEl.innerHTML = maskText(prefix + formatNumber(totalAssetValue * multiplier), 'global_tot_asset');
-
-            if (globalCost > 0) {
-                const gColor = globalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
-                const gSign = globalPnl > 0 ? '+' : '';
-                const gPct = (globalPnl / globalCost) * 100;
-                globalTotalPnlEl.innerHTML = maskText(`${gSign}${formatNumber(globalPnl * multiplier)} <span class="text-[9px] opacity-80">(${gSign}${formatNumber(gPct)}%)</span>`, 'global_pnl');
-                globalTotalPnlEl.className = `text-xs md:text-sm font-bold tracking-wide mt-0.5 ${gColor}`;
-            } else {
-                globalTotalPnlEl.innerHTML = maskText('-', 'global_pnl');
-                globalTotalPnlEl.className = `text-xs md:text-sm font-bold text-slate-500 mt-0.5`;
-            }
+        if (globalStockValueEl && globalTotalAssetEl) {
+            globalStockValueEl.innerHTML = maskText(prefix + formatNumber(stockValue * globalMultiplier), 'global_stock_val');
+            globalTotalAssetEl.innerHTML = maskText(prefix + formatNumber(totalAssetValue * globalMultiplier), 'global_tot_asset');
         }
 
         calculatePnl(visibleRecords, symAvgPrice, symCost); 
@@ -3756,25 +3747,55 @@
       loadAndMigrateData();
       updateSoundUI();
 
-      // 🌟 綁定現金輸入框事件
+      // 🌟 綁定獨立的全局貨幣切換選單
+      const globalCurrencySelect = document.getElementById('globalCurrencySelect');
+      if (globalCurrencySelect) {
+          globalCurrencySelect.value = isGlobalMop ? 'MOP' : 'USD';
+          globalCurrencySelect.addEventListener('change', (e) => {
+              isGlobalMop = (e.target.value === 'MOP');
+              updateDashboard();
+          });
+      }
+
+      // 🌟 綁定現金雙擊輸入事件
       const gCashInput = document.getElementById('globalCashInput');
-      if (gCashInput) {
-          // 初始化時根據當前幣別顯示
-          const initMult = isDashboardMop ? MOP_RATE : 1;
-          gCashInput.value = parseFloat((accountCash * initMult).toFixed(2));
-          
+      const gCashDisplayContainer = document.getElementById('cashDisplayContainer');
+      
+      if (gCashInput && gCashDisplayContainer) {
+          // 雙擊文字進入編輯模式
+          gCashDisplayContainer.addEventListener('dblclick', () => {
+              if(isPrivacyMode) return showToast('請先關閉隱私模式才能編輯', 'error');
+              
+              gCashDisplayContainer.classList.add('hidden');
+              gCashInput.classList.remove('hidden');
+              
+              // 準備正確的數值並全選
+              const currentMult = isGlobalMop ? MOP_RATE : 1;
+              gCashInput.value = parseFloat((accountCash * currentMult).toFixed(2));
+              gCashInput.focus();
+              gCashInput.select();
+          });
+
+          // 輸入時即時更新底層數據
           gCashInput.addEventListener('input', (e) => {
-              const currentMult = isDashboardMop ? MOP_RATE : 1;
+              const currentMult = isGlobalMop ? MOP_RATE : 1;
               const displayVal = parseFloat(e.target.value) || 0;
-              // 🌟 核心：無論介面是 MOP 還是 USD，底層永遠除以匯率轉回 USD 儲存
               accountCash = displayVal / currentMult; 
               localStorage.setItem('stockCalcCash_PRO', accountCash); 
               updateDashboard(); 
           });
-      }
-      if(els.tickerInput && els.tickerInput.value) { 
-        fetchStockData(); 
-        if(els.autoRefreshCheckbox && els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); 
+
+          // 失去焦點或按下 Enter 時恢復文字顯示
+          const finishEditing = () => {
+              gCashInput.classList.add('hidden');
+              gCashDisplayContainer.classList.remove('hidden');
+              updateDashboard();
+          };
+
+          gCashInput.addEventListener('blur', finishEditing);
+          gCashInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') finishEditing();
+          });
       }
     });
   </script>
