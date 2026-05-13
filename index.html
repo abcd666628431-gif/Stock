@@ -1216,46 +1216,69 @@
             globalPnl += (currentPriceForTick - r.price) * r.quantity;
         });
 
-        // 數學邏輯：股票現值 = 本金 + 盈虧； 總資產 = 現金 + 股票現值
-        const stockValue = globalCost + globalPnl;
-        const totalAssetValue = accountCash + stockValue;
+        // 底層數據 (USD)
+        const stockValueUSD = globalCost + globalPnl;
+        const totalAssetValueUSD = accountCash + stockValueUSD;
 
-        const globalStockValueEl = document.getElementById('globalStockValue');
-        const globalTotalAssetEl = document.getElementById('globalTotalAsset');
-        const globalTotalPnlEl = document.getElementById('globalTotalPnl'); // 🌟 加回總盈虧元素
+        // 換算數據 (MOP)
+        const accountCashMOP = accountCash * MOP_RATE;
+        const stockValueMOP = stockValueUSD * MOP_RATE;
+        const totalAssetValueMOP = totalAssetValueUSD * MOP_RATE;
+        const globalPnlMOP = globalPnl * MOP_RATE;
+
+        // DOM 元素
         const globalCashInputEl = document.getElementById('globalCashInput');
-        const globalCashDisplayTextEl = document.getElementById('globalCashDisplayText');
-
-        // 🌟 獨立的全局匯率乘數
-        const globalMultiplier = isGlobalMop ? MOP_RATE : 1;
+        const globalCashDisplayTextMOP = document.getElementById('globalCashDisplayTextMOP');
+        const globalCashDisplayTextUSD = document.getElementById('globalCashDisplayTextUSD');
         
-        // 🌟 新增：更新全局的 USD/MOP 標籤顯示
-        const globalCurrencyLabelEl = document.getElementById('globalCurrencyLabel');
-        if (globalCurrencyLabelEl) globalCurrencyLabelEl.textContent = isGlobalMop ? 'MOP' : 'USD';
+        const globalStockValueMOP = document.getElementById('globalStockValueMOP');
+        const globalStockValueUSD = document.getElementById('globalStockValueUSD');
+        
+        const globalTotalAssetMOP = document.getElementById('globalTotalAssetMOP');
+        const globalTotalAssetUSD = document.getElementById('globalTotalAssetUSD');
+        
+        const globalTotalPnlMOP = document.getElementById('globalTotalPnlMOP');
+        const globalTotalPnlUSD = document.getElementById('globalTotalPnlUSD');
 
-        if (globalCashInputEl && globalCashDisplayTextEl) {
-            globalCashDisplayTextEl.innerHTML = maskText(prefix + formatNumber(accountCash * globalMultiplier), 'global_cash');
+        // 更新現金顯示
+        if (globalCashInputEl && globalCashDisplayTextMOP && globalCashDisplayTextUSD) {
+            globalCashDisplayTextMOP.innerHTML = maskText(prefix + formatNumber(accountCashMOP), 'global_cash_mop');
+            globalCashDisplayTextUSD.innerHTML = maskText('(' + prefix + formatNumber(accountCash) + ')', 'global_cash_usd');
+            
+            // 輸入框維持輸入 MOP
             if (document.activeElement !== globalCashInputEl) {
-                globalCashInputEl.value = parseFloat((accountCash * globalMultiplier).toFixed(2));
+                globalCashInputEl.value = parseFloat(accountCashMOP.toFixed(2));
             }
         }
 
-        if (globalStockValueEl && globalTotalAssetEl) {
-            globalStockValueEl.innerHTML = maskText(prefix + formatNumber(stockValue * globalMultiplier), 'global_stock_val');
-            globalTotalAssetEl.innerHTML = maskText(prefix + formatNumber(totalAssetValue * globalMultiplier), 'global_tot_asset');
+        // 更新現值與總資產
+        if (globalStockValueMOP && globalTotalAssetMOP) {
+            globalStockValueMOP.innerHTML = maskText(prefix + formatNumber(stockValueMOP), 'global_stock_val_mop');
+            globalStockValueUSD.innerHTML = maskText('(' + prefix + formatNumber(stockValueUSD) + ')', 'global_stock_val_usd');
+            
+            globalTotalAssetMOP.innerHTML = maskText(prefix + formatNumber(totalAssetValueMOP), 'global_tot_asset_mop');
+            globalTotalAssetUSD.innerHTML = maskText('(' + prefix + formatNumber(totalAssetValueUSD) + ')', 'global_tot_asset_usd');
         }
 
-        // 🌟 加回未實現總盈虧的更新邏輯
-        if (globalTotalPnlEl) {
+        // 更新未實現盈虧
+        if (globalTotalPnlMOP && globalTotalPnlUSD) {
             if (globalCost > 0) {
                 const gColor = globalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+                const gColorUSD = globalPnl >= 0 ? 'text-emerald-700' : 'text-rose-700'; // 暗一點的顏色給 USD
                 const gSign = globalPnl > 0 ? '+' : '';
                 const gPct = (globalPnl / globalCost) * 100;
-                globalTotalPnlEl.innerHTML = maskText(`${gSign}${formatNumber(globalPnl * globalMultiplier)} <span class="text-[9px] opacity-80 ml-1">(${gSign}${formatNumber(gPct)}%)</span>`, 'global_pnl');
-                globalTotalPnlEl.className = `text-xs md:text-sm font-bold tracking-wide h-[16px] md:h-[20px] flex items-center justify-end ${gColor}`;
+                
+                globalTotalPnlMOP.innerHTML = maskText(`${gSign}${formatNumber(globalPnlMOP)} <span class="text-[9px] opacity-80 ml-1">(${gSign}${formatNumber(gPct)}%)</span>`, 'global_pnl_mop');
+                globalTotalPnlMOP.className = `text-xs md:text-sm font-bold leading-none ${gColor}`;
+                
+                globalTotalPnlUSD.innerHTML = maskText(`(${gSign}${formatNumber(globalPnl)})`, 'global_pnl_usd');
+                globalTotalPnlUSD.className = `text-[9px] md:text-[10px] font-medium leading-none mt-1 ${gColorUSD}`;
             } else {
-                globalTotalPnlEl.innerHTML = maskText('-', 'global_pnl');
-                globalTotalPnlEl.className = `text-xs md:text-sm font-bold text-slate-500 h-[16px] md:h-[20px] flex items-center justify-end`;
+                globalTotalPnlMOP.innerHTML = maskText('-', 'global_pnl_mop');
+                globalTotalPnlMOP.className = `text-xs md:text-sm font-bold text-slate-500 leading-none`;
+                
+                globalTotalPnlUSD.innerHTML = maskText('(-)', 'global_pnl_usd');
+                globalTotalPnlUSD.className = `text-[9px] md:text-[10px] font-medium text-slate-600 leading-none mt-1`;
             }
         }
 
@@ -3837,18 +3860,16 @@
               gCashDisplayContainer.classList.add('hidden');
               gCashInput.classList.remove('hidden');
               
-              // 準備正確的數值並全選
-              const currentMult = isGlobalMop ? MOP_RATE : 1;
-              gCashInput.value = parseFloat((accountCash * currentMult).toFixed(2));
+              // 輸入框固定顯示 MOP 數值
+              gCashInput.value = parseFloat((accountCash * MOP_RATE).toFixed(2));
               gCashInput.focus();
               gCashInput.select();
           });
 
-          // 輸入時即時更新底層數據
+          // 輸入時即時更新底層數據 (將 MOP 轉回 USD 儲存)
           gCashInput.addEventListener('input', (e) => {
-              const currentMult = isGlobalMop ? MOP_RATE : 1;
               const displayVal = parseFloat(e.target.value) || 0;
-              accountCash = displayVal / currentMult; 
+              accountCash = displayVal / MOP_RATE; 
               localStorage.setItem('stockCalcCash_PRO', accountCash); 
               updateDashboard(); 
           });
