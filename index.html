@@ -356,8 +356,9 @@
                 <input id="priceInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required>
               </div>
             </div>
-            <div id="previewAvgCostContainer" class="hidden text-[11px] text-slate-300 bg-[#2a2a2a] p-1.5 rounded-lg border border-[#444] text-center transition-all shadow-inner">
-              預計新平均成本: <span id="previewAvgCost" class="font-bold text-[#00e676] ml-1">-</span>
+            <div id="previewAvgCostContainer" class="hidden text-[11px] text-slate-300 bg-[#2a2a2a] py-1.5 px-3 rounded-lg border border-[#444] flex justify-between items-center transition-all shadow-inner">
+              <span>總值: <span id="previewTotalValue" class="font-bold text-[#2979ff] ml-1">-</span></span>
+              <span>新均價: <span id="previewAvgCost" class="font-bold text-[#00e676] ml-1">-</span></span>
             </div>
             
             <div class="flex gap-2">
@@ -3400,20 +3401,40 @@
       const p = parseFloat(els.priceInput.value);
       const currentSym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
       
-      if (!isNaN(q) && q > 0 && !isNaN(p) && p > 0 && currentSym) {
-        // 只使用未隱藏的紀錄來預覽
-        const visibleRecords = records.filter(r => r.ticker === currentSym && !r.isHidden);
-        const currentTotalShares = visibleRecords.reduce((s, r) => s + r.quantity, 0);
-        const currentTotalCost = visibleRecords.reduce((s, r) => s + r.cost, 0);
+      // 取得新加入的「單筆總值」元素
+      const previewTotalValueEl = document.getElementById('previewTotalValue');
+
+      // 🌟 拔除 currentSym 的強制綁定，讓使用者就算還沒打股票代號，也能先算總值
+      if (!isNaN(q) && q > 0 && !isNaN(p) && p > 0) {
         
-        const newTotalShares = currentTotalShares + q;
-        const newTotalCost = currentTotalCost + (p * q);
-        const newAvg = newTotalShares > 0 ? newTotalCost / newTotalShares : 0;
+        // 1. 計算單筆交易的總值並顯示
+        const tradeTotal = p * q;
+        if (previewTotalValueEl) {
+            previewTotalValueEl.textContent = formatNumber(tradeTotal, 2);
+        }
+
+        // 2. 計算預計新平均成本
+        if (currentSym) {
+            // 如果上方有輸入代號，就加上歷史倉位一起算均價
+            const visibleRecords = records.filter(r => r.ticker === currentSym && !r.isHidden);
+            const currentTotalShares = visibleRecords.reduce((s, r) => s + r.quantity, 0);
+            const currentTotalCost = visibleRecords.reduce((s, r) => s + r.cost, 0);
+            
+            const newTotalShares = currentTotalShares + q;
+            const newTotalCost = currentTotalCost + tradeTotal;
+            const newAvg = newTotalShares > 0 ? newTotalCost / newTotalShares : 0;
+            
+            els.previewAvgCost.textContent = formatNumber(newAvg, 4);
+        } else {
+            // 如果還沒輸入代號，預計新均價就等於本次輸入的買入價
+            els.previewAvgCost.textContent = formatNumber(p, 4);
+        }
         
-        els.previewAvgCost.textContent = formatNumber(newAvg, 4);
         els.previewAvgCostContainer.classList.remove('hidden');
+        els.previewAvgCostContainer.classList.add('flex'); // 確保使用 Flex 佈局
       } else {
         els.previewAvgCostContainer.classList.add('hidden');
+        els.previewAvgCostContainer.classList.remove('flex');
       }
     }
 
