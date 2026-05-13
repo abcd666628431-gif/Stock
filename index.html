@@ -3723,7 +3723,17 @@
 
       loadAndMigrateData();
       updateSoundUI();
-      
+
+      // 🌟 綁定現金輸入框事件
+      const gCashInput = document.getElementById('globalCashInput');
+      if (gCashInput) {
+          gCashInput.value = accountCash;
+          gCashInput.addEventListener('input', (e) => {
+              accountCash = parseFloat(e.target.value) || 0;
+              localStorage.setItem('stockCalcCash_PRO', accountCash); // 永久儲存現金
+              updateDashboard(); // 重新計算總資產
+          });
+      }
       if(els.tickerInput && els.tickerInput.value) { 
         fetchStockData(); 
         if(els.autoRefreshCheckbox && els.autoRefreshCheckbox.checked) quoteInterval = setInterval(fetchQuoteOnly, (els.refreshIntervalInput.value||2)*1000); 
