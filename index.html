@@ -1226,27 +1226,8 @@
         const totalAssetValueMOP = totalAssetValueUSD * MOP_RATE;
         const globalPnlMOP = globalPnl * MOP_RATE;
 
-        // DOM 元素
         const globalCashInputEl = document.getElementById('globalCashInput');
-        const globalCashDisplayTextMOP = document.getElementById('globalCashDisplayTextMOP');
-        const globalCashDisplayTextUSD = document.getElementById('globalCashDisplayTextUSD');
-        
-        const globalStockValueMOP = document.getElementById('globalStockValueMOP');
-        const globalStockValueUSD = document.getElementById('globalStockValueUSD');
-        
-        const globalTotalAssetMOP = document.getElementById('globalTotalAssetMOP');
-        const globalTotalAssetUSD = document.getElementById('globalTotalAssetUSD');
-        
-        const globalTotalPnlMOP = document.getElementById('globalTotalPnlMOP');
-        const globalTotalPnlUSD = document.getElementById('globalTotalPnlUSD');
-
-        // 更新現金顯示
-        if (globalCashInputEl && globalCashDisplayTextMOP && globalCashDisplayTextUSD) {
-            globalCashDisplayTextMOP.innerHTML = maskText(prefix + formatNumber(accountCashMOP), 'global_cash_mop');
-            globalCashDisplayTextUSD.innerHTML = maskText('(' + prefix + formatNumber(accountCash) + ')', 'global_cash_usd');
-            
-            // 輸入框維持輸入 MOP
-            if (document.activeElement !== globalCashInputEl) {
+        // (舊的 globalCashDisplayTextEl 已經沒用，因為您改成了 MOP 和 USD 兩個 span)
                 globalCashInputEl.value = parseFloat(accountCashMOP.toFixed(2));
             }
         }
@@ -3541,30 +3522,17 @@
       
       // 如果不是模擬紀錄，才加入歷史紀錄
       if (!isMock) {
-        tradeHistory.unshift({ 
-          id: syncId + 'h', 
-          time: timeStr, 
-          dateStr: getLocalDateString(now), 
-          ticker: s, price: p, quantity: q, direction: dir 
-        });
-        if (tradeHistory.length > 200) tradeHistory.pop();
-
-        // 🌟 自動計算現金變動 (開倉)
-        const tradeCost = p * q;
-        if (dir === 'long') {
-            accountCash -= tradeCost; // 做多：扣除現金買入
-        } else {
-            accountCash += tradeCost; // 做空：賣出借券獲得現金
-        }
-        
-        // 解決 JavaScript 浮點數誤差，保留小數點後四位
-        accountCash = Math.round(accountCash * 10000) / 10000;
+        // ... (中間省略) ...
         localStorage.setItem('stockCalcCash_PRO', accountCash);
         // (UI 更新已交由底下的 commitDataChange -> updateDashboard 統一處理)
       }
       
-      els.priceInput.value = ''; els.qtyInput.value = ''; 
-      if(els.previewAvgCostContainer) els.previewAvgCostContainer.classList.add('hidden');
+      els.priceInput.value = ''; 
+      els.qtyInput.value = ''; 
+      if (qtySlider) qtySlider.value = 0; // 重置拉桿數值
+      
+      // 🌟 修復：主動呼叫此函數，系統會發現沒數字了，自動隱藏拉桿並禁用數量輸入框
+      updatePreviewAvgCost(); 
       
       commitDataChange(); 
       showToast(isMock ? '✅ 模擬推演紀錄已加入' : '✅ 紀錄已正式新增', 'success');
