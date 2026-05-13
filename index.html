@@ -652,6 +652,7 @@
       </div>
 
       <!-- 右側：看板、圖表與列表 -->
+      <!-- 右側：看板、圖表與列表 -->
       <div class="flex-1 min-w-0 space-y-2 md:space-y-4">
         
         <!-- 🌟 全局總資產概況橫幅 -->
@@ -691,7 +692,7 @@
              </div>
           </div>
         </div>
-        
+
         <!-- 核心看板 (極限壓縮為一行 5 欄) -->
         <div class="grid grid-cols-5 gap-1 md:gap-3">
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center relative overflow-hidden group">
@@ -1249,7 +1250,7 @@
         const totalAssetValueMOP = totalAssetValueUSD * MOP_RATE;
         const globalPnlMOP = globalPnl * MOP_RATE;
 
-        // DOM 元素獲取
+        // DOM 元素
         const globalCashInputEl = document.getElementById('globalCashInput');
         const globalCashDisplayTextMOP = document.getElementById('globalCashDisplayTextMOP');
         const globalCashDisplayTextUSD = document.getElementById('globalCashDisplayTextUSD');
@@ -1260,31 +1261,27 @@
         const globalTotalAssetMOP = document.getElementById('globalTotalAssetMOP');
         const globalTotalAssetUSD = document.getElementById('globalTotalAssetUSD');
 
-        const prefix = '$';
-
-        // 更新現金顯示
+        // 🌟 更新現金顯示
         if (globalCashInputEl && globalCashDisplayTextMOP && globalCashDisplayTextUSD) {
             globalCashDisplayTextMOP.innerHTML = maskText(prefix + formatNumber(accountCashMOP), 'global_cash_mop');
             globalCashDisplayTextUSD.innerHTML = maskText('(' + prefix + formatNumber(accountCash) + ')', 'global_cash_usd');
             
+            // 輸入框維持輸入 MOP
             if (document.activeElement !== globalCashInputEl) {
                 globalCashInputEl.value = parseFloat(accountCashMOP.toFixed(2));
             }
         }
 
-        // 更新股票現值
-        if (globalStockValueMOP && globalStockValueUSD) {
+        // 🌟 更新現值與總資產
+        if (globalStockValueMOP && globalTotalAssetMOP) {
             globalStockValueMOP.innerHTML = maskText(prefix + formatNumber(stockValueMOP), 'global_stock_val_mop');
             globalStockValueUSD.innerHTML = maskText('(' + prefix + formatNumber(stockValueUSD) + ')', 'global_stock_val_usd');
-        }
-
-        // 更新總資產淨值
-        if (globalTotalAssetMOP && globalTotalAssetUSD) {
+            
             globalTotalAssetMOP.innerHTML = maskText(prefix + formatNumber(totalAssetValueMOP), 'global_tot_asset_mop');
             globalTotalAssetUSD.innerHTML = maskText('(' + prefix + formatNumber(totalAssetValueUSD) + ')', 'global_tot_asset_usd');
         }
 
-        // 🌟 更新未實現盈虧容器
+        // 🌟 更新未實現盈虧 (將 MOP, USD, % 重新排版)
         const globalTotalPnlContainer = document.getElementById('globalTotalPnlContainer');
         if (globalTotalPnlContainer) {
             if (globalCost > 0) {
@@ -1293,6 +1290,7 @@
                 const gSign = globalPnl > 0 ? '+' : '';
                 const gPct = (globalPnl / globalCost) * 100;
                 
+                // MOP 在上，USD 和百分比在下
                 const mopStr = maskText(`${gSign}${formatNumber(globalPnlMOP)}`, 'global_pnl_mop');
                 const usdStr = maskText(`(${gSign}${formatNumber(globalPnl)})`, 'global_pnl_usd');
                 const pctStr = maskText(`(${gSign}${formatNumber(gPct)}%)`, 'global_pnl_pct');
