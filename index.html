@@ -683,13 +683,13 @@
                <span id="globalTotalAssetUSD" class="text-[9px] md:text-[10px] text-slate-400 font-bold leading-none mt-1">($0.00)</span>
              </div>
              
-             <div class="flex flex-col shrink-0 pointer-events-none items-end">
+             <div class="flex flex-col shrink-0 pointer-events-none items-end min-w-[90px]">
                <span class="text-[9px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
-               <span id="globalTotalPnlMOP" class="text-xs md:text-sm font-bold leading-none">-</span>
-               <span id="globalTotalPnlUSD" class="text-[9px] md:text-[10px] font-medium leading-none mt-1">-</span>
+               <!-- 🌟 將盈虧顯示合併為單一動態容器 -->
+               <div id="globalTotalPnlContainer" class="flex flex-col items-end">
+                  <span class="text-xs md:text-sm font-bold leading-none text-slate-500">-</span>
+               </div>
              </div>
-          </div>
-        </div>
 
         <!-- 核心看板 (極限壓縮為一行 5 欄) -->
         <div class="grid grid-cols-5 gap-1 md:gap-3">
@@ -1260,25 +1260,32 @@
             globalTotalAssetUSD.innerHTML = maskText('(' + prefix + formatNumber(totalAssetValueUSD) + ')', 'global_tot_asset_usd');
         }
 
-        // 更新未實現盈虧
-        if (globalTotalPnlMOP && globalTotalPnlUSD) {
+        // 🌟 新版：更新未實現盈虧 (將 MOP, USD, % 重新排版)
+        const globalTotalPnlContainer = document.getElementById('globalTotalPnlContainer');
+        if (globalTotalPnlContainer) {
             if (globalCost > 0) {
                 const gColor = globalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
-                const gColorUSD = globalPnl >= 0 ? 'text-emerald-700' : 'text-rose-700'; // 暗一點的顏色給 USD
+                const gColorUSD = globalPnl >= 0 ? 'text-emerald-700' : 'text-rose-700';
                 const gSign = globalPnl > 0 ? '+' : '';
                 const gPct = (globalPnl / globalCost) * 100;
                 
-                globalTotalPnlMOP.innerHTML = maskText(`${gSign}${formatNumber(globalPnlMOP)} <span class="text-[9px] opacity-80 ml-1">(${gSign}${formatNumber(gPct)}%)</span>`, 'global_pnl_mop');
-                globalTotalPnlMOP.className = `text-xs md:text-sm font-bold leading-none ${gColor}`;
-                
-                globalTotalPnlUSD.innerHTML = maskText(`(${gSign}${formatNumber(globalPnl)})`, 'global_pnl_usd');
-                globalTotalPnlUSD.className = `text-[9px] md:text-[10px] font-medium leading-none mt-1 ${gColorUSD}`;
+                // MOP 在上，USD 和百分比在下
+                const mopStr = maskText(`${gSign}${formatNumber(globalPnlMOP)}`, 'global_pnl_mop');
+                const usdStr = maskText(`(${gSign}${formatNumber(globalPnl)})`, 'global_pnl_usd');
+                const pctStr = maskText(`(${gSign}${formatNumber(gPct)}%)`, 'global_pnl_pct');
+
+                globalTotalPnlContainer.innerHTML = `
+                    <span class="text-xs md:text-sm font-bold leading-none ${gColor} mb-1">${mopStr}</span>
+                    <div class="flex items-center space-x-1.5 leading-none">
+                        <span class="text-[9px] md:text-[10px] font-medium ${gColorUSD}">${usdStr}</span>
+                        <span class="text-[9px] opacity-80 ${gColor}">${pctStr}</span>
+                    </div>
+                `;
             } else {
-                globalTotalPnlMOP.innerHTML = maskText('-', 'global_pnl_mop');
-                globalTotalPnlMOP.className = `text-xs md:text-sm font-bold text-slate-500 leading-none`;
-                
-                globalTotalPnlUSD.innerHTML = maskText('(-)', 'global_pnl_usd');
-                globalTotalPnlUSD.className = `text-[9px] md:text-[10px] font-medium text-slate-600 leading-none mt-1`;
+                globalTotalPnlContainer.innerHTML = `
+                    <span class="text-xs md:text-sm font-bold leading-none text-slate-500 mb-1">${maskText('-', 'global_pnl_mop')}</span>
+                    <span class="text-[9px] md:text-[10px] font-medium text-slate-600 leading-none">${maskText('(-)', 'global_pnl_usd')}</span>
+                `;
             }
         }
 
