@@ -346,16 +346,27 @@
                 <div class="text-[11px] font-bold text-slate-400 py-1.5 rounded peer-checked:bg-[#ff5252]/20 peer-checked:text-[#ff5252] transition-all">🔴 做空 (看跌)</div>
               </label>
             </div>
+            
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">數量 (股)</label>
-                <input id="qtyInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required>
+                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">價位</label>
+                <input id="priceInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" placeholder="先輸入價位" required>
               </div>
               <div>
-                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">價位</label>
-                <input id="priceInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required>
+                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">數量 (股)</label>
+                <input id="qtyInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required disabled>
               </div>
             </div>
+            
+            <!-- 🌟 新增的拉桿區塊 (預設隱藏) -->
+            <div id="sliderContainer" class="hidden flex-col space-y-1 mt-1 bg-[#1e1e1e] p-2 rounded-lg border border-[#333]">
+              <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 px-1">
+                <span>0</span>
+                <span>最高預算: <input type="number" id="budgetInput" value="10000" class="w-14 bg-transparent border-b border-dashed border-[#555] text-right text-[#2979ff] outline-none p-0" title="點擊修改預算上限"> (可修改)</span>
+              </div>
+              <input type="range" id="qtySlider" min="0" max="100" step="1" value="0" class="w-full cursor-pointer accent-[#2979ff] bg-[#2a2a2a] rounded-lg h-1.5">
+            </div>
+
             <div id="previewAvgCostContainer" class="hidden text-[11px] text-slate-300 bg-[#2a2a2a] py-1.5 px-3 rounded-lg border border-[#444] flex justify-between items-center transition-all shadow-inner">
               <span>總值: <span id="previewTotalValue" class="font-bold text-[#2979ff] ml-1">-</span></span>
               <span>新均價: <span id="previewAvgCost" class="font-bold text-[#00e676] ml-1">-</span></span>
@@ -3395,16 +3406,41 @@
       saveUIStateLocal();
     });
 
+    // 取得新增的 DOM 元素
+    const sliderContainer = document.getElementById('sliderContainer');
+    const qtySlider = document.getElementById('qtySlider');
+    const budgetInput = document.getElementById('budgetInput');
+
     function updatePreviewAvgCost() {
       if(!els.qtyInput || !els.priceInput || !els.previewAvgCostContainer || !els.previewAvgCost) return;
-      const q = parseFloat(els.qtyInput.value);
+      const q = parseFloat(els.qtyInput.value) || 0;
       const p = parseFloat(els.priceInput.value);
       const currentSym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
       
-      // 取得新加入的「單筆總值」元素
       const previewTotalValueEl = document.getElementById('previewTotalValue');
 
-      // 🌟 拔除 currentSym 的強制綁定，讓使用者就算還沒打股票代號，也能先算總值
+      // 🌟 控制拉桿容器顯示與否：有輸入有效的價格，就開放拉桿並解鎖數量輸入
+      if (!isNaN(p) && p > 0) {
+          els.qtyInput.disabled = false;
+          if (sliderContainer) {
+              sliderContainer.classList.remove('hidden');
+              sliderContainer.classList.add('flex');
+              
+              // 根據預算重新計算拉桿最大值
+              const budget = parseFloat(budgetInput.value) || 10000;
+              const maxQty = Math.floor(budget / p);
+              qtySlider.max = maxQty > 0 ? maxQty : 1;
+              // 確保拉桿位置與輸入框同步
+              qtySlider.value = q <= qtySlider.max ? q : qtySlider.max;
+          }
+      } else {
+          els.qtyInput.disabled = true;
+          if (sliderContainer) {
+              sliderContainer.classList.add('hidden');
+              sliderContainer.classList.remove('flex');
+          }
+      }
+
       if (!isNaN(q) && q > 0 && !isNaN(p) && p > 0) {
         
         // 1. 計算單筆交易的總值並顯示
@@ -3415,7 +3451,6 @@
 
         // 2. 計算預計新平均成本
         if (currentSym) {
-            // 如果上方有輸入代號，就加上歷史倉位一起算均價
             const visibleRecords = records.filter(r => r.ticker === currentSym && !r.isHidden);
             const currentTotalShares = visibleRecords.reduce((s, r) => s + r.quantity, 0);
             const currentTotalCost = visibleRecords.reduce((s, r) => s + r.cost, 0);
@@ -3426,20 +3461,40 @@
             
             els.previewAvgCost.textContent = formatNumber(newAvg, 4);
         } else {
-            // 如果還沒輸入代號，預計新均價就等於本次輸入的買入價
             els.previewAvgCost.textContent = formatNumber(p, 4);
         }
         
         els.previewAvgCostContainer.classList.remove('hidden');
-        els.previewAvgCostContainer.classList.add('flex'); // 確保使用 Flex 佈局
+        els.previewAvgCostContainer.classList.add('flex'); 
       } else {
         els.previewAvgCostContainer.classList.add('hidden');
         els.previewAvgCostContainer.classList.remove('flex');
       }
     }
 
-    if(els.qtyInput) els.qtyInput.addEventListener('input', updatePreviewAvgCost);
+    // 🌟 綁定事件互相連動
     if(els.priceInput) els.priceInput.addEventListener('input', updatePreviewAvgCost);
+    
+    // 手動輸入數量時，更新拉桿與預覽
+    if(els.qtyInput) {
+        els.qtyInput.addEventListener('input', (e) => {
+            if (qtySlider) qtySlider.value = e.target.value;
+            updatePreviewAvgCost();
+        });
+    }
+    
+    // 拖動拉桿時，更新數量輸入框與預覽
+    if (qtySlider) {
+        qtySlider.addEventListener('input', (e) => {
+            if (els.qtyInput) els.qtyInput.value = e.target.value;
+            updatePreviewAvgCost();
+        });
+    }
+
+    // 修改預算上限時，重新計算拉桿比例
+    if (budgetInput) {
+        budgetInput.addEventListener('change', updatePreviewAvgCost);
+    }
 
     // 🌟 統一：處理新增一般紀錄與模擬紀錄
     function handleAddRecord(isMock) {
