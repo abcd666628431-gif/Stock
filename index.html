@@ -889,7 +889,13 @@
     const MOP_RATE = 8;
     
     // 🌟 全局最新價格快取：記住每個代號被抓取過的最新的價格
+    // 🌟 全局最新價格快取：記住每個代號被抓取過的最新的價格
     let latestPrices = JSON.parse(localStorage.getItem('stockCalcPrices_PRO')) || {};
+    
+    // 🌟 手動價格鎖定庫：記住哪些代號是使用者手動輸入的
+    let manualPriceLocks = JSON.parse(localStorage.getItem('stockCalcManualLocks_PRO')) || {};
+    
+    // 🌟 單點解鎖記憶集
     
     // 🌟 單點解鎖記憶集
     let unlockedMasks = new Set();
@@ -2937,29 +2943,32 @@
     }
 
     async function fetchStockData() {
-  if(!els.tickerInput) return;
-  const symbol = els.tickerInput.value.toUpperCase().trim();
-  if (!symbol) return showToast('請輸入股票代號！', 'error');
-  
-  addSavedTicker(symbol);
-  if(els.fetchBtn) { els.fetchBtn.textContent = ".."; els.fetchBtn.disabled = true; }
-  
-  if (symbol !== currentChartSymbol) renderTradingViewWidget(symbol, currentChartInterval);
+      if(!els.tickerInput) return;
+      const symbol = els.tickerInput.value.toUpperCase().trim();
+      if (!symbol) return showToast('請輸入股票代號！', 'error');
+      
+      addSavedTicker(symbol);
+      
+      if (symbol !== currentChartSymbol) renderTradingViewWidget(symbol, currentChartInterval);
 
-  // 👇 --- 新增這段：切換代號時，立刻載入最後一次抓取或手動修改的價格 --- 👇
-  if (latestPrices[symbol] !== undefined && !isNaN(latestPrices[symbol])) {
-    if(els.currentPriceDisp) els.currentPriceDisp.value = latestPrices[symbol];
-    updateDashboard();
-    if (activeRecordsTab === 'current') renderTable(); // 立刻渲染下方列表的即時盈虧
-  } else {
-    // 如果系統完全沒有這檔股票的記憶，先清空價格框避免混淆
-    if(els.currentPriceDisp) els.currentPriceDisp.value = '';
-  }
-  // 👆 ------------------------------------------------------------------- 👆
-  
-  const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
+      // 🌟 切換代號時，立刻載入最後一次抓取或手動修改的價格
+      if (latestPrices[symbol] !== undefined && !isNaN(latestPrices[symbol])) {
+        if(els.currentPriceDisp) els.currentPriceDisp.value = latestPrices[symbol];
+        updateDashboard();
+        if (activeRecordsTab === 'current') renderTable();
+      } else {
+        if(els.currentPriceDisp) els.currentPriceDisp.value = '';
+      }
 
-  try {
+      // 🛑 若此代碼被標記為手動鎖定，則保留您的手動價格，直接跳過 API 抓取
+      if (manualPriceLocks[symbol]) {
+         return; 
+      }
+
+      if(els.fetchBtn) { els.fetchBtn.textContent = ".."; els.fetchBtn.disabled = true; }
+      const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
+
+      try {
 // ... 下面保持原樣 ...
         if (source === 'finnhub') {
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
@@ -3009,22 +3018,26 @@
       if(!els.tickerInput) return;
       const symbol = els.tickerInput.value.toUpperCase().trim();
       if (!symbol) return;
+      
+      // 🛑 若此代碼被標記為手動鎖定，跳過背景自動刷新
+      if (manualPriceLocks[symbol]) return;
+
       const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
 
       try {
         if (source === 'finnhub') {
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
-          // 第一處替換為 (Finnhub)：
-if (res.status === 429) {
-  showToast('達 Finnhub API 限制，等待下一次自動重試...', 'error'); 
-  return;
-}
-
-// 第二處替換為 (TwelveData)：
-if (data.code === 429) {
-  showToast(`達 TwelveData 限制，等待下一次自動重試...`, 'error'); 
-  return;
-}
+          if (res.status === 429) {
+            // 🌟 移除取消打勾，僅提示等待下次刷新
+            showToast('達 Finnhub 限制，等待下一次自動重試...', 'error'); return;
+          }
+// ...(中間略，注意下面這段是在 else 的 TwelveData 判斷裡)...
+           const res = await fetch(`https://api.twelvedata.com/price?symbol=${symbol}&apikey=${TWELVE_DATA_API_KEY}`);
+           const data = await res.json();
+           if (data.code === 429) {
+              // 🌟 移除取消打勾，僅提示等待下次刷新
+              showToast(`達 TwelveData 限制，等待下一次自動重試...`, 'error'); return;
+           }
           const data = await res.json();
           if (data && data.c) { 
             latestPrices[symbol] = data.c;
@@ -3092,8 +3105,22 @@ if (data.code === 429) {
       });
     }
 
-    if(els.fetchBtn) els.fetchBtn.addEventListener('click', fetchStockData);
-    if(els.tickerInput) els.tickerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); fetchStockData(); }});
+    i// 🌟 當使用者明確按下「抓取」或「Enter」時，解除手動鎖定並強制更新
+    if(els.fetchBtn) els.fetchBtn.addEventListener('click', () => {
+        const sym = els.tickerInput.value.toUpperCase().trim();
+        delete manualPriceLocks[sym]; 
+        localStorage.setItem('stockCalcManualLocks_PRO', JSON.stringify(manualPriceLocks));
+        fetchStockData();
+    });
+    if(els.tickerInput) els.tickerInput.addEventListener('keydown', (e) => { 
+        if (e.key === 'Enter') { 
+            e.preventDefault(); 
+            const sym = els.tickerInput.value.toUpperCase().trim();
+            delete manualPriceLocks[sym]; 
+            localStorage.setItem('stockCalcManualLocks_PRO', JSON.stringify(manualPriceLocks));
+            fetchStockData(); 
+        }
+    });
 
     function saveUIStateLocal() {
       localStorage.setItem('stockCalcLocalUI_PRO', JSON.stringify({
@@ -3266,6 +3293,10 @@ if (data.code === 429) {
       if (sym && !isNaN(val)) {
          latestPrices[sym] = val;
          localStorage.setItem('stockCalcPrices_PRO', JSON.stringify(latestPrices));
+         
+         // 🌟 標記此代號為「手動鎖定」，避免被自動刷新覆蓋
+         manualPriceLocks[sym] = true;
+         localStorage.setItem('stockCalcManualLocks_PRO', JSON.stringify(manualPriceLocks));
       }
       updateDashboard();
       if (activeRecordsTab === 'current') renderTable();
