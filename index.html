@@ -1210,9 +1210,13 @@
         const globalCurrencyLabelEl = document.getElementById('globalCurrencyLabel');
         const globalCashInputEl = document.getElementById('globalCashInput');
 
-        // 處理輸入框隱私模式遮罩 (把 type 變成 password)
+        // 處理輸入框隱私模式遮罩與 USD/MOP 匯率切換
         if (globalCashInputEl) {
             globalCashInputEl.type = isPrivacyMode ? 'password' : 'number';
+            // 🌟 核心：切換幣別時，自動更新輸入框內的數值 (若使用者正在輸入則跳過，以免干擾游標)
+            if (document.activeElement !== globalCashInputEl) {
+                globalCashInputEl.value = parseFloat((accountCash * multiplier).toFixed(2));
+            }
         }
 
         if (globalStockValueEl && globalTotalAssetEl && globalTotalPnlEl) {
@@ -1949,6 +1953,21 @@
                 });
             }
         }
+
+        // 🌟 自動計算現金變動 (平倉結算)
+        const grossAmount = sellPrice * sellQty;
+        if (rec.direction === 'short') {
+            // 做空平倉：花費現金買回，並支付手續費
+            accountCash -= (grossAmount + fee);
+        } else {
+            // 做多平倉：獲得賣出現金，並扣去手續費
+            accountCash += (grossAmount - fee);
+        }
+        
+        // 解決 JavaScript 浮點數誤差
+        accountCash = Math.round(accountCash * 10000) / 10000;
+        localStorage.setItem('stockCalcCash_PRO', accountCash);
+        // (UI 更新已交由底下的 commitDataChange -> updateDashboard 統一處理)
 
         // 更新當前倉位
         if (isFullClose) {
@@ -3430,6 +3449,19 @@
           ticker: s, price: p, quantity: q, direction: dir 
         });
         if (tradeHistory.length > 200) tradeHistory.pop();
+
+        // 🌟 自動計算現金變動 (開倉)
+        const tradeCost = p * q;
+        if (dir === 'long') {
+            accountCash -= tradeCost; // 做多：扣除現金買入
+        } else {
+            accountCash += tradeCost; // 做空：賣出借券獲得現金
+        }
+        
+        // 解決 JavaScript 浮點數誤差，保留小數點後四位
+        accountCash = Math.round(accountCash * 10000) / 10000;
+        localStorage.setItem('stockCalcCash_PRO', accountCash);
+        // (UI 更新已交由底下的 commitDataChange -> updateDashboard 統一處理)
       }
       
       els.priceInput.value = ''; els.qtyInput.value = ''; 
@@ -3727,11 +3759,17 @@
       // 🌟 綁定現金輸入框事件
       const gCashInput = document.getElementById('globalCashInput');
       if (gCashInput) {
-          gCashInput.value = accountCash;
+          // 初始化時根據當前幣別顯示
+          const initMult = isDashboardMop ? MOP_RATE : 1;
+          gCashInput.value = parseFloat((accountCash * initMult).toFixed(2));
+          
           gCashInput.addEventListener('input', (e) => {
-              accountCash = parseFloat(e.target.value) || 0;
-              localStorage.setItem('stockCalcCash_PRO', accountCash); // 永久儲存現金
-              updateDashboard(); // 重新計算總資產
+              const currentMult = isDashboardMop ? MOP_RATE : 1;
+              const displayVal = parseFloat(e.target.value) || 0;
+              // 🌟 核心：無論介面是 MOP 還是 USD，底層永遠除以匯率轉回 USD 儲存
+              accountCash = displayVal / currentMult; 
+              localStorage.setItem('stockCalcCash_PRO', accountCash); 
+              updateDashboard(); 
           });
       }
       if(els.tickerInput && els.tickerInput.value) { 
