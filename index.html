@@ -2937,18 +2937,30 @@
     }
 
     async function fetchStockData() {
-      if(!els.tickerInput) return;
-      const symbol = els.tickerInput.value.toUpperCase().trim();
-      if (!symbol) return showToast('請輸入股票代號！', 'error');
-      
-      addSavedTicker(symbol);
-      if(els.fetchBtn) { els.fetchBtn.textContent = ".."; els.fetchBtn.disabled = true; }
-      
-      if (symbol !== currentChartSymbol) renderTradingViewWidget(symbol, currentChartInterval);
-      
-      const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
+  if(!els.tickerInput) return;
+  const symbol = els.tickerInput.value.toUpperCase().trim();
+  if (!symbol) return showToast('請輸入股票代號！', 'error');
+  
+  addSavedTicker(symbol);
+  if(els.fetchBtn) { els.fetchBtn.textContent = ".."; els.fetchBtn.disabled = true; }
+  
+  if (symbol !== currentChartSymbol) renderTradingViewWidget(symbol, currentChartInterval);
 
-      try {
+  // 👇 --- 新增這段：切換代號時，立刻載入最後一次抓取或手動修改的價格 --- 👇
+  if (latestPrices[symbol] !== undefined && !isNaN(latestPrices[symbol])) {
+    if(els.currentPriceDisp) els.currentPriceDisp.value = latestPrices[symbol];
+    updateDashboard();
+    if (activeRecordsTab === 'current') renderTable(); // 立刻渲染下方列表的即時盈虧
+  } else {
+    // 如果系統完全沒有這檔股票的記憶，先清空價格框避免混淆
+    if(els.currentPriceDisp) els.currentPriceDisp.value = '';
+  }
+  // 👆 ------------------------------------------------------------------- 👆
+  
+  const source = els.dataSourceSelect ? els.dataSourceSelect.value : 'finnhub';
+
+  try {
+// ... 下面保持原樣 ...
         if (source === 'finnhub') {
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
           if (res.status === 401) return showToast('Finnhub API Key 無效，請重新設置', 'error');
@@ -3002,11 +3014,17 @@
       try {
         if (source === 'finnhub') {
           const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
-          if (res.status === 429) {
-            if(els.autoRefreshCheckbox) els.autoRefreshCheckbox.checked = false; 
-            clearInterval(quoteInterval);
-            showToast('自動刷新暫停 (達 Finnhub API 限制)', 'error'); return;
-          }
+          // 第一處替換為 (Finnhub)：
+if (res.status === 429) {
+  showToast('達 Finnhub API 限制，等待下一次自動重試...', 'error'); 
+  return;
+}
+
+// 第二處替換為 (TwelveData)：
+if (data.code === 429) {
+  showToast(`達 TwelveData 限制，等待下一次自動重試...`, 'error'); 
+  return;
+}
           const data = await res.json();
           if (data && data.c) { 
             latestPrices[symbol] = data.c;
