@@ -1126,17 +1126,14 @@
         const valStr = els.currentPriceDisp ? els.currentPriceDisp.value : '';
         const v = parseFloat(valStr);
 
-        // 🌟 動態伸縮：當前成交價輸入框寬度
+        // 1. 處理單股看板 UI 伸縮
         if(els.currentPriceDisp) {
             const length = valStr.length > 0 ? valStr.length : 1;
             els.currentPriceDisp.style.width = (length + 1.2) + 'ch';
         }
 
-        // 1. 篩選出符合目前上方輸入框代號的倉位紀錄
-        const activeRecords = currentSym ? records.filter(r => r.ticker === currentSym) : [];
-        
-        // 2. 🌟 剔除已被使用者臨時隱藏的紀錄
-        const visibleRecords = activeRecords.filter(r => !r.isHidden);
+        // 2. 篩選當前代號的倉位 (供單股看板使用)
+        const visibleRecords = records.filter(r => r.ticker === currentSym && !r.isHidden);
         
         let symShares = 0, symCost = 0;
         visibleRecords.forEach(r => { 
@@ -1145,67 +1142,92 @@
         });
         const symAvgPrice = symShares > 0 ? symCost / symShares : 0;
 
+        // 更新單股看板數據
         if(els.totalSharesDisp) els.totalSharesDisp.innerHTML = maskText(formatNumber(symShares), 'dash_shares');
         if(els.avgPriceDisp) els.avgPriceDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'dash_avg');
 
-        const dis = symShares === 0;
-        if(els.targetPriceInput) els.targetPriceInput.disabled = dis;
-        if(els.percentInput) els.percentInput.disabled = dis;
-        if(els.expectedPnlInput) els.expectedPnlInput.disabled = dis;
+        // 🌟 3. 重頭戲：重新計算「全帳戶」總資產 (不受當前輸入框代號影響)
+        let globalCostUSD = 0;
+        let globalPnlUSD = 0;
 
-        let totalPnl = 0;
+        // 遍歷所有未隱藏的紀錄，計算總盈虧
+        records.filter(r => !r.isHidden).forEach(r => {
+            globalCostUSD += r.cost;
+            // 優先使用快取中的最新價格，若無則使用買入價
+            const rowPrice = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) 
+                             ? latestPrices[r.ticker] : r.price;
+            globalPnlUSD += (rowPrice - r.price) * r.quantity;
+        });
 
-        // --- 🌟 處理 MOP 切換與總成本/現值顯示 ---
-        const multiplier = isDashboardMop ? MOP_RATE : 1;
-        const prefix = '$'; 
+        // 定義底層各項指標 (USD)
+        const stockValueUSD = globalCostUSD + globalPnlUSD;
+        const totalAssetValueUSD = accountCash + stockValueUSD;
+
+        // 🌟 4. 執行 MOP 換算與 DOM 渲染
+        const prefix = '$';
+        const accountCashMOP = accountCash * MOP_RATE;
+        const stockValueMOP = stockValueUSD * MOP_RATE;
+        const totalAssetValueMOP = totalAssetValueUSD * MOP_RATE;
+        const globalPnlMOP = globalPnlUSD * MOP_RATE;
+
+        // 更新現金
+        const cashMopEl = document.getElementById('globalCashDisplayTextMOP');
+        const cashUsdEl = document.getElementById('globalCashDisplayTextUSD');
+        if (cashMopEl) cashMopEl.innerHTML = maskText(prefix + formatNumber(accountCashMOP), 'global_cash_mop');
+        if (cashUsdEl) cashUsdEl.innerHTML = maskText('(' + prefix + formatNumber(accountCash) + ')', 'global_cash_usd');
         
-        if(els.costCurrencyLabel) els.costCurrencyLabel.textContent = isDashboardMop ? 'MOP' : 'USD';
-        if(els.totalCostDisp) els.totalCostDisp.innerHTML = maskText(prefix + formatNumber(symCost * multiplier), 'dash_cost');
+        // 更新股票現值
+        const stockMopEl = document.getElementById('globalStockValueMOP');
+        const stockUsdEl = document.getElementById('globalStockValueUSD');
+        if (stockMopEl) stockMopEl.innerHTML = maskText(prefix + formatNumber(stockValueMOP), 'global_stock_val_mop');
+        if (stockUsdEl) stockUsdEl.innerHTML = maskText('(' + prefix + formatNumber(stockValueUSD) + ')', 'global_stock_val_usd');
 
+        // 更新總資產淨值
+        const totalMopEl = document.getElementById('globalTotalAssetMOP');
+        const totalUsdEl = document.getElementById('globalTotalAssetUSD');
+        if (totalMopEl) totalMopEl.innerHTML = maskText(prefix + formatNumber(totalAssetValueMOP), 'global_tot_asset_mop');
+        if (totalUsdEl) totalUsdEl.innerHTML = maskText('(' + prefix + formatNumber(totalAssetValueUSD) + ')', 'global_tot_asset_usd');
+
+        // 更新未實現總盈虧 (雙層排版)
+        const pnlContainer = document.getElementById('globalTotalPnlContainer');
+        if (pnlContainer) {
+            if (globalCostUSD > 0) {
+                const gColor = globalPnlUSD >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+                const gColorUSD = globalPnlUSD >= 0 ? 'text-emerald-700' : 'text-rose-700';
+                const gSign = globalPnlUSD > 0 ? '+' : '';
+                const gPct = (globalPnlUSD / globalCostUSD) * 100;
+
+                pnlContainer.innerHTML = `
+                    <span class="text-xs md:text-sm font-bold leading-none ${gColor} mb-1">
+                        ${maskText(`${gSign}${formatNumber(globalPnlMOP)}`, 'global_pnl_mop')}
+                    </span>
+                    <div class="flex items-center space-x-1.5 leading-none">
+                        <span class="text-[9px] md:text-[10px] font-medium ${gColorUSD}">
+                            ${maskText(`(${gSign}${formatNumber(globalPnlUSD)})`, 'global_pnl_usd')}
+                        </span>
+                        <span class="text-[9px] opacity-80 ${gColor}">
+                            ${maskText(`(${gSign}${formatNumber(gPct)}%)`, 'global_pnl_pct')}
+                        </span>
+                    </div>
+                `;
+            } else {
+                pnlContainer.innerHTML = `<span class="text-xs font-bold text-slate-500">-</span>`;
+            }
+        }
+
+        // 5. 處理單股看板內的現值與盈虧
+        let singlePnl = 0;
         if (!isNaN(v) && symShares > 0) {
-            const c = (symAvgPrice > 0 && v > symAvgPrice) ? '#00e676' : (symAvgPrice > 0 && v < symAvgPrice) ? '#ff5252' : '#fff';
-            if (els.currentPriceDisp) els.currentPriceDisp.style.color = c;
-
-            visibleRecords.forEach(r => {
-                // 統一全部使用 (現價 - 買價) * 數量
-                const diff = (v - r.price);
-                totalPnl += diff * r.quantity;
-            });
-            const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
-            const displayPnl = totalPnl * multiplier;
-            
-            if(els.currentPnlAmountDisp) { 
-                els.currentPnlAmountDisp.style.color = color; 
-                els.currentPnlAmountDisp.innerHTML = maskText((displayPnl > 0 ? '+' : '') + formatNumber(displayPnl), 'dash_pnl_amt'); 
-            }
-            
-            // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
-            if (symCost > 0) {
-              if(els.currentPnlPercentDisp) { 
-                  els.currentPnlPercentDisp.style.color = color; 
-                  els.currentPnlPercentDisp.innerHTML = maskText('(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)', 'dash_pnl_pct'); 
-              }
-            } else {
-              if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
-            }
-        } else {
-            if(els.currentPriceDisp) els.currentPriceDisp.style.color = '#fff';
-            if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = '#718096'; els.currentPnlAmountDisp.innerHTML = maskText('-', 'dash_pnl_amt'); }
-            if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
-        }
-
-        const totalValue = symCost + totalPnl;
-        
-        if(els.totalValueDisp) {
-            if (!isNaN(v) && symShares > 0) {
-               els.totalValueDisp.innerHTML = '現值: ' + maskText(prefix + formatNumber(totalValue * multiplier), 'dash_val');
-               els.totalValueDisp.className = `text-[8px] md:text-[10px] font-bold leading-none mt-0.5 md:mt-1 ${totalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]'}`;
-            } else {
-               els.totalValueDisp.innerHTML = '現值: ' + maskText(prefix + formatNumber(symCost * multiplier), 'dash_val');
-               els.totalValueDisp.className = 'text-[8px] md:text-[10px] font-bold text-slate-400 leading-none mt-0.5 md:mt-1';
+            singlePnl = (v - symAvgPrice) * symShares;
+            if(els.totalValueDisp) {
+                els.totalValueDisp.innerHTML = '現值: ' + maskText(prefix + formatNumber((symCost + singlePnl) * multiplier), 'dash_val');
+                els.totalValueDisp.className = `text-[8px] md:text-[10px] font-bold mt-0.5 ${singlePnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]'}`;
             }
         }
 
+        // 觸發底部的預期試算
+        calculatePnl(visibleRecords, symAvgPrice, symCost); 
+    }
         // 🌟 計算帳戶全局總資產 (包含現金)
         let globalCost = 0;
         let globalPnl = 0;
