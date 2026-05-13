@@ -643,33 +643,39 @@
       <div class="flex-1 min-w-0 space-y-2 md:space-y-4">
         
         <!-- 🌟 全局總資產概況橫幅 -->
-        <div class="card-panel px-3 py-2 md:px-5 md:py-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-          <div class="flex items-center space-x-3 w-full md:w-auto">
-            <span class="text-sm md:text-lg font-bold text-white tracking-wider whitespace-nowrap">總資產概況</span>
-            <select id="globalCurrencySelect" class="bg-[#2a2a2a] text-[#2979ff] border border-[#444] rounded px-2 py-1 text-xs outline-none focus:border-[#2979ff] shadow-sm cursor-pointer font-bold transition-colors hover:bg-[#333]">
+        <div class="card-panel px-3 py-2 md:px-4 md:py-3 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-3">
+          <div class="flex items-center space-x-2 md:space-x-3 w-full md:w-auto">
+            <span class="text-xs md:text-sm font-bold text-white tracking-wider whitespace-nowrap">總資產概況</span>
+            <select id="globalCurrencySelect" class="bg-[#2a2a2a] text-[#2979ff] border border-[#444] rounded px-1.5 py-0.5 text-[10px] md:text-xs outline-none focus:border-[#2979ff] shadow-sm cursor-pointer font-bold transition-colors hover:bg-[#333]">
               <option value="USD">USD</option>
               <option value="MOP">MOP</option>
             </select>
           </div>
           
-          <div class="flex space-x-4 md:space-x-8 text-right items-center w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
-             <div class="flex flex-col items-end shrink-0 border-r border-[#444] pr-4">
-               <span class="text-[9px] md:text-xs text-slate-400 font-bold mb-1">帳戶現金</span>
+          <div class="flex space-x-3 md:space-x-5 text-right items-center w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
+             <div class="flex flex-col items-end shrink-0 border-r border-[#444] pr-3 md:pr-4">
+               <span class="text-[8px] md:text-[9px] text-slate-400 font-bold mb-0.5">帳戶現金</span>
                <!-- 雙擊切換容器 -->
-               <div id="cashDisplayContainer" class="cursor-pointer group flex items-center h-[20px] md:h-[24px]" title="雙擊修改現金">
-                 <span id="globalCashDisplayText" class="text-sm md:text-lg font-bold text-white group-hover:text-[#2979ff] transition-colors border-b border-transparent group-hover:border-[#2979ff] border-dashed">$0.00</span>
+               <div id="cashDisplayContainer" class="cursor-pointer group flex items-center h-[16px] md:h-[20px]" title="雙擊修改現金">
+                 <span id="globalCashDisplayText" class="text-xs md:text-sm font-bold text-white group-hover:text-[#2979ff] transition-colors border-b border-transparent group-hover:border-[#2979ff] border-dashed">$0.00</span>
                </div>
-               <input type="number" id="globalCashInput" step="any" value="0" class="hidden w-20 md:w-28 text-sm md:text-lg font-bold text-[#2979ff] bg-[#1e1e1e] border border-[#2979ff] rounded px-1 outline-none text-right shadow-inner h-[20px] md:h-[24px]">
+               <input type="number" id="globalCashInput" step="any" value="0" class="hidden w-16 md:w-20 text-xs md:text-sm font-bold text-[#2979ff] bg-[#1e1e1e] border border-[#2979ff] rounded px-1 outline-none text-right shadow-inner h-[16px] md:h-[20px]">
              </div>
              
-             <div class="flex flex-col shrink-0 border-r border-[#444] pr-4">
-               <span class="text-[9px] md:text-xs text-slate-400 font-bold mb-1">股票現值</span>
-               <span id="globalStockValue" class="text-sm md:text-lg font-bold text-slate-300 h-[20px] md:h-[24px] flex items-center justify-end">$0.00</span>
+             <div class="flex flex-col shrink-0 border-r border-[#444] pr-3 md:pr-4">
+               <span class="text-[8px] md:text-[9px] text-slate-400 font-bold mb-0.5">股票現值</span>
+               <span id="globalStockValue" class="text-xs md:text-sm font-bold text-slate-300 h-[16px] md:h-[20px] flex items-center justify-end">$0.00</span>
              </div>
              
+             <div class="flex flex-col shrink-0 border-r border-[#444] pr-3 md:pr-4">
+               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">總資產淨值</span>
+               <span id="globalTotalAsset" class="text-sm md:text-lg font-black text-white h-[16px] md:h-[20px] flex items-center justify-end">$0.00</span>
+             </div>
+             
+             <!-- 🌟 加回的未實現總盈虧 -->
              <div class="flex flex-col shrink-0">
-               <span class="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">總資產淨值</span>
-               <span id="globalTotalAsset" class="text-base md:text-2xl font-black text-white h-[20px] md:h-[24px] flex items-center justify-end">$0.00</span>
+               <span class="text-[8px] md:text-[9px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
+               <span id="globalTotalPnl" class="text-xs md:text-sm font-bold h-[16px] md:h-[20px] flex items-center justify-end">-</span>
              </div>
           </div>
         </div>
@@ -1207,6 +1213,7 @@
 
         const globalStockValueEl = document.getElementById('globalStockValue');
         const globalTotalAssetEl = document.getElementById('globalTotalAsset');
+        const globalTotalPnlEl = document.getElementById('globalTotalPnl'); // 🌟 加回總盈虧元素
         const globalCashInputEl = document.getElementById('globalCashInput');
         const globalCashDisplayTextEl = document.getElementById('globalCashDisplayText');
 
@@ -1214,10 +1221,7 @@
         const globalMultiplier = isGlobalMop ? MOP_RATE : 1;
 
         if (globalCashInputEl && globalCashDisplayTextEl) {
-            // 文字顯示模式 (支援隱私遮罩)
             globalCashDisplayTextEl.innerHTML = maskText(prefix + formatNumber(accountCash * globalMultiplier), 'global_cash');
-            
-            // 確保輸入框內的數值正確，但如果使用者正在打字則不覆蓋
             if (document.activeElement !== globalCashInputEl) {
                 globalCashInputEl.value = parseFloat((accountCash * globalMultiplier).toFixed(2));
             }
@@ -1226,6 +1230,20 @@
         if (globalStockValueEl && globalTotalAssetEl) {
             globalStockValueEl.innerHTML = maskText(prefix + formatNumber(stockValue * globalMultiplier), 'global_stock_val');
             globalTotalAssetEl.innerHTML = maskText(prefix + formatNumber(totalAssetValue * globalMultiplier), 'global_tot_asset');
+        }
+
+        // 🌟 加回未實現總盈虧的更新邏輯
+        if (globalTotalPnlEl) {
+            if (globalCost > 0) {
+                const gColor = globalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+                const gSign = globalPnl > 0 ? '+' : '';
+                const gPct = (globalPnl / globalCost) * 100;
+                globalTotalPnlEl.innerHTML = maskText(`${gSign}${formatNumber(globalPnl * globalMultiplier)} <span class="text-[9px] opacity-80 ml-1">(${gSign}${formatNumber(gPct)}%)</span>`, 'global_pnl');
+                globalTotalPnlEl.className = `text-xs md:text-sm font-bold tracking-wide h-[16px] md:h-[20px] flex items-center justify-end ${gColor}`;
+            } else {
+                globalTotalPnlEl.innerHTML = maskText('-', 'global_pnl');
+                globalTotalPnlEl.className = `text-xs md:text-sm font-bold text-slate-500 h-[16px] md:h-[20px] flex items-center justify-end`;
+            }
         }
 
         calculatePnl(visibleRecords, symAvgPrice, symCost); 
@@ -3188,23 +3206,6 @@
         saveUIStateLocal(); 
       });
     }
-
-    // 🌟 當使用者明確按下「抓取」或「Enter」時，解除手動鎖定並強制更新
-    if(els.fetchBtn) els.fetchBtn.addEventListener('click', () => {
-        const sym = els.tickerInput.value.toUpperCase().trim();
-        delete manualPriceLocks[sym]; 
-        localStorage.setItem('stockCalcManualLocks_PRO', JSON.stringify(manualPriceLocks));
-        fetchStockData();
-    });
-    if(els.tickerInput) els.tickerInput.addEventListener('keydown', (e) => { 
-        if (e.key === 'Enter') { 
-            e.preventDefault(); 
-            const sym = els.tickerInput.value.toUpperCase().trim();
-            delete manualPriceLocks[sym]; 
-            localStorage.setItem('stockCalcManualLocks_PRO', JSON.stringify(manualPriceLocks));
-            fetchStockData(); 
-        }
-    });
 
     function saveUIStateLocal() {
       localStorage.setItem('stockCalcLocalUI_PRO', JSON.stringify({
