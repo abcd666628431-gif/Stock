@@ -643,28 +643,34 @@
       <div class="flex-1 min-w-0 space-y-2 md:space-y-4">
         
         <!-- 🌟 全局總資產概況橫幅 -->
-        <div class="card-panel px-3 py-2 md:px-4 md:py-3 rounded-xl flex justify-between items-center bg-gradient-to-r from-[#1a1a2e] to-[#1e1e1e] border-l-4 border-l-[#d946ef] shadow-md cursor-pointer hover:bg-[#252538] transition-colors group" onclick="toggleDashboardMop()" title="點擊切換 USD/MOP">
-          <div class="flex items-center space-x-2 md:space-x-3">
+        <div class="card-panel px-2 py-2 md:px-4 md:py-3 rounded-xl flex justify-between items-center bg-gradient-to-r from-[#1a1a2e] to-[#1e1e1e] border-l-4 border-l-[#d946ef] shadow-md transition-colors">
+          <div class="flex items-center space-x-2 md:space-x-3 cursor-pointer hover:opacity-80 group" onclick="toggleDashboardMop()" title="點擊切換 USD/MOP">
             <div class="bg-[#d946ef]/20 p-1.5 rounded-lg text-[#d946ef] group-hover:scale-110 transition-transform">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/></svg>
             </div>
             <div class="flex flex-col items-start">
-               <span class="text-[11px] md:text-sm font-bold text-white tracking-wider">帳戶總資產</span>
+               <span class="text-[11px] md:text-sm font-bold text-white tracking-wider whitespace-nowrap">總資產概況</span>
                <span id="globalCurrencyLabel" class="text-[8px] md:text-[9px] text-[#d946ef] bg-[#d946ef]/10 px-1 rounded mt-0.5">USD</span>
             </div>
           </div>
-          <div class="flex space-x-3 md:space-x-8 text-right">
-             <div class="flex flex-col">
-               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">總投入本金</span>
-               <span id="globalTotalCost" class="text-xs md:text-sm font-bold text-white">$0.00</span>
+          <div class="flex space-x-2 md:space-x-6 text-right items-center overflow-x-auto no-scrollbar pl-2">
+             <div class="flex flex-col items-end shrink-0 border-r border-[#444] pr-2 md:pr-4">
+               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">💵 帳戶現金</span>
+               <div class="flex items-center mt-0.5">
+                 <input type="number" id="globalCashInput" step="any" value="0" class="w-16 md:w-20 text-xs md:text-sm font-bold text-white bg-transparent border-b border-dashed border-[#555] hover:border-[#d946ef] focus:border-solid focus:border-[#d946ef] outline-none text-right transition-colors p-0" title="點擊修改現金">
+               </div>
              </div>
-             <div class="flex flex-col">
-               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">當前總現值 (剩餘)</span>
-               <span id="globalTotalValue" class="text-xs md:text-sm font-bold text-[#d946ef] drop-shadow-[0_0_5px_rgba(217,70,239,0.3)]">$0.00</span>
+             <div class="flex flex-col shrink-0">
+               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">📦 股票現值</span>
+               <span id="globalStockValue" class="text-xs md:text-sm font-bold text-white mt-0.5">$0.00</span>
              </div>
-             <div class="flex flex-col">
-               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">總未實現盈虧</span>
-               <span id="globalTotalPnl" class="text-xs md:text-sm font-bold">-</span>
+             <div class="flex flex-col shrink-0">
+               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">💰 總資產淨值</span>
+               <span id="globalTotalAsset" class="text-xs md:text-sm font-bold text-[#d946ef] drop-shadow-[0_0_5px_rgba(217,70,239,0.3)] mt-0.5">$0.00</span>
+             </div>
+             <div class="flex flex-col shrink-0 pl-1 md:pl-2 border-l border-[#444]">
+               <span class="text-[8px] md:text-[10px] text-slate-400 font-bold">未實現總盈虧</span>
+               <span id="globalTotalPnl" class="text-xs md:text-sm font-bold mt-0.5">-</span>
              </div>
           </div>
         </div>
@@ -922,6 +928,8 @@
     // 🌟 手動價格鎖定庫：記住哪些代號是使用者手動輸入的
     let manualPriceLocks = JSON.parse(localStorage.getItem('stockCalcManualLocks_PRO')) || {};
     
+    // 🌟 帳戶現金儲存變數 (永久記憶)
+    let accountCash = parseFloat(localStorage.getItem('stockCalcCash_PRO')) || 0;
     // 🌟 單點解鎖記憶集
     
     // 🌟 單點解鎖記憶集
@@ -1180,41 +1188,48 @@
             }
         }
 
-        // 🌟 新增：計算帳戶全局總資產 (Global Assets)
+        // 🌟 計算帳戶全局總資產 (包含現金)
         let globalCost = 0;
         let globalPnl = 0;
 
-        // 計算所有未隱藏的倉位
+        // 計算所有未隱藏的股票倉位
         records.filter(r => !r.isHidden).forEach(r => {
             globalCost += r.cost;
-            // 嘗試取得快取中的最新價格，若無則暫時使用成本價 (盈虧計為0)
             const currentPriceForTick = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) 
                                         ? latestPrices[r.ticker] : r.price;
-            // 統一為 (現價 - 買價)
             globalPnl += (currentPriceForTick - r.price) * r.quantity;
         });
 
-        const globalValue = globalCost + globalPnl;
+        // 數學邏輯：股票現值 = 本金 + 盈虧； 總資產 = 現金 + 股票現值
+        const stockValue = globalCost + globalPnl;
+        const totalAssetValue = accountCash + stockValue;
 
-        const globalTotalCostEl = document.getElementById('globalTotalCost');
-        const globalTotalValueEl = document.getElementById('globalTotalValue');
+        const globalStockValueEl = document.getElementById('globalStockValue');
+        const globalTotalAssetEl = document.getElementById('globalTotalAsset');
         const globalTotalPnlEl = document.getElementById('globalTotalPnl');
         const globalCurrencyLabelEl = document.getElementById('globalCurrencyLabel');
+        const globalCashInputEl = document.getElementById('globalCashInput');
 
-        if (globalTotalCostEl && globalTotalValueEl && globalTotalPnlEl) {
+        // 處理輸入框隱私模式遮罩 (把 type 變成 password)
+        if (globalCashInputEl) {
+            globalCashInputEl.type = isPrivacyMode ? 'password' : 'number';
+        }
+
+        if (globalStockValueEl && globalTotalAssetEl && globalTotalPnlEl) {
             if (globalCurrencyLabelEl) globalCurrencyLabelEl.textContent = isDashboardMop ? 'MOP' : 'USD';
-            globalTotalCostEl.innerHTML = maskText(prefix + formatNumber(globalCost * multiplier), 'global_cost');
-            globalTotalValueEl.innerHTML = maskText(prefix + formatNumber(globalValue * multiplier), 'global_val');
+            
+            globalStockValueEl.innerHTML = maskText(prefix + formatNumber(stockValue * multiplier), 'global_stock_val');
+            globalTotalAssetEl.innerHTML = maskText(prefix + formatNumber(totalAssetValue * multiplier), 'global_tot_asset');
 
             if (globalCost > 0) {
                 const gColor = globalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
                 const gSign = globalPnl > 0 ? '+' : '';
                 const gPct = (globalPnl / globalCost) * 100;
                 globalTotalPnlEl.innerHTML = maskText(`${gSign}${formatNumber(globalPnl * multiplier)} <span class="text-[9px] opacity-80">(${gSign}${formatNumber(gPct)}%)</span>`, 'global_pnl');
-                globalTotalPnlEl.className = `text-xs md:text-sm font-bold tracking-wide ${gColor}`;
+                globalTotalPnlEl.className = `text-xs md:text-sm font-bold tracking-wide mt-0.5 ${gColor}`;
             } else {
                 globalTotalPnlEl.innerHTML = maskText('-', 'global_pnl');
-                globalTotalPnlEl.className = `text-xs md:text-sm font-bold text-slate-500`;
+                globalTotalPnlEl.className = `text-xs md:text-sm font-bold text-slate-500 mt-0.5`;
             }
         }
 
