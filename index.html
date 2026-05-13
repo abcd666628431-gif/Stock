@@ -3540,14 +3540,32 @@
       
       // 如果不是模擬紀錄，才加入歷史紀錄
       if (!isMock) {
-        // ... (中間省略) ...
+        // 1. 寫入歷史紀錄
+        tradeHistory.unshift({ 
+          id: syncId + 'h', 
+          time: timeStr, 
+          dateStr: getLocalDateString(now), 
+          ticker: s, price: p, quantity: q, direction: dir 
+        });
+        if (tradeHistory.length > 200) tradeHistory.pop();
+
+        // 2. 自動計算現金變動 (開倉)
+        const tradeCost = p * q;
+        if (dir === 'long') {
+            accountCash -= tradeCost; // 做多：扣除現金買入
+        } else {
+            accountCash += tradeCost; // 做空：賣出借券獲得現金
+        }
+        
+        // 3. 解決 JavaScript 浮點數誤差，保留小數點後四位並儲存
+        accountCash = Math.round(accountCash * 10000) / 10000;
         localStorage.setItem('stockCalcCash_PRO', accountCash);
-        // (UI 更新已交由底下的 commitDataChange -> updateDashboard 統一處理)
       }
       
+      // 清空輸入框與重置拉桿
       els.priceInput.value = ''; 
       els.qtyInput.value = ''; 
-      if (qtySlider) qtySlider.value = 0; // 重置拉桿數值
+      if (qtySlider) qtySlider.value = 0; 
       
       // 🌟 修復：主動呼叫此函數，系統會發現沒數字了，自動隱藏拉桿並禁用數量輸入框
       updatePreviewAvgCost(); 
