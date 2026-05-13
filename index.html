@@ -3105,7 +3105,7 @@
       });
     }
 
-    i// 🌟 當使用者明確按下「抓取」或「Enter」時，解除手動鎖定並強制更新
+    // 🌟 當使用者明確按下「抓取」或「Enter」時，解除手動鎖定並強制更新
     if(els.fetchBtn) els.fetchBtn.addEventListener('click', () => {
         const sym = els.tickerInput.value.toUpperCase().trim();
         delete manualPriceLocks[sym]; 
