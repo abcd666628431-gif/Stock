@@ -1180,6 +1180,44 @@
             }
         }
 
+        // 🌟 新增：計算帳戶全局總資產 (Global Assets)
+        let globalCost = 0;
+        let globalPnl = 0;
+
+        // 計算所有未隱藏的倉位
+        records.filter(r => !r.isHidden).forEach(r => {
+            globalCost += r.cost;
+            // 嘗試取得快取中的最新價格，若無則暫時使用成本價 (盈虧計為0)
+            const currentPriceForTick = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) 
+                                        ? latestPrices[r.ticker] : r.price;
+            // 統一為 (現價 - 買價)
+            globalPnl += (currentPriceForTick - r.price) * r.quantity;
+        });
+
+        const globalValue = globalCost + globalPnl;
+
+        const globalTotalCostEl = document.getElementById('globalTotalCost');
+        const globalTotalValueEl = document.getElementById('globalTotalValue');
+        const globalTotalPnlEl = document.getElementById('globalTotalPnl');
+        const globalCurrencyLabelEl = document.getElementById('globalCurrencyLabel');
+
+        if (globalTotalCostEl && globalTotalValueEl && globalTotalPnlEl) {
+            if (globalCurrencyLabelEl) globalCurrencyLabelEl.textContent = isDashboardMop ? 'MOP' : 'USD';
+            globalTotalCostEl.innerHTML = maskText(prefix + formatNumber(globalCost * multiplier), 'global_cost');
+            globalTotalValueEl.innerHTML = maskText(prefix + formatNumber(globalValue * multiplier), 'global_val');
+
+            if (globalCost > 0) {
+                const gColor = globalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+                const gSign = globalPnl > 0 ? '+' : '';
+                const gPct = (globalPnl / globalCost) * 100;
+                globalTotalPnlEl.innerHTML = maskText(`${gSign}${formatNumber(globalPnl * multiplier)} <span class="text-[9px] opacity-80">(${gSign}${formatNumber(gPct)}%)</span>`, 'global_pnl');
+                globalTotalPnlEl.className = `text-xs md:text-sm font-bold tracking-wide ${gColor}`;
+            } else {
+                globalTotalPnlEl.innerHTML = maskText('-', 'global_pnl');
+                globalTotalPnlEl.className = `text-xs md:text-sm font-bold text-slate-500`;
+            }
+        }
+
         calculatePnl(visibleRecords, symAvgPrice, symCost); 
     }
 
