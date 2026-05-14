@@ -1163,19 +1163,36 @@
         if(els.totalCostDisp) els.totalCostDisp.innerHTML = maskText(prefix + formatNumber(symCost * multiplier), 'dash_cost');
 
         if (!isNaN(v) && symShares > 0) {
-        // 🌟 計算帳戶全局總資產 (包含現金)
-        let globalCost = 0;
-        let globalPnl = 0;
+            const c = (symAvgPrice > 0 && v > symAvgPrice) ? '#00e676' : (symAvgPrice > 0 && v < symAvgPrice) ? '#ff5252' : '#fff';
+            if (els.currentPriceDisp) els.currentPriceDisp.style.color = c;
 
-        // 計算所有未隱藏的股票倉位
-        records.filter(r => !r.isHidden).forEach(r => {
-            globalCost += r.cost;
-            const currentPriceForTick = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) 
-                                        ? latestPrices[r.ticker] : r.price;
-            // 🚀 修正：無視文字標籤，統一固定使用 (現價 - 買價) * 數量
-            const priceDiff = (currentPriceForTick - r.price);
-            globalPnl += priceDiff * r.quantity;
-        });
+            visibleRecords.forEach(r => {
+                // 統一全部使用 (現價 - 買價) * 數量
+                const diff = (v - r.price);
+                totalPnl += diff * r.quantity;
+            });
+            const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
+            const displayPnl = totalPnl * multiplier;
+            
+            if(els.currentPnlAmountDisp) { 
+                els.currentPnlAmountDisp.style.color = color; 
+                els.currentPnlAmountDisp.innerHTML = maskText((displayPnl > 0 ? '+' : '') + formatNumber(displayPnl), 'dash_pnl_amt'); 
+            }
+            
+            // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
+            if (symCost > 0) {
+              if(els.currentPnlPercentDisp) { 
+                  els.currentPnlPercentDisp.style.color = color; 
+                  els.currentPnlPercentDisp.innerHTML = maskText('(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)', 'dash_pnl_pct'); 
+              }
+            } else {
+              if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
+            }
+        } else {
+            if(els.currentPriceDisp) els.currentPriceDisp.style.color = '#fff';
+            if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = '#718096'; els.currentPnlAmountDisp.innerHTML = maskText('-', 'dash_pnl_amt'); }
+            if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
+        }
 
         const totalValue = symCost + totalPnl;
         
@@ -1198,9 +1215,7 @@
             globalCost += r.cost;
             const currentPriceForTick = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) 
                                         ? latestPrices[r.ticker] : r.price;
-            // 修正：加入全局多/空盈虧的獨立計算邏輯
-            const priceDiff = r.direction === 'short' ? (r.price - currentPriceForTick) : (currentPriceForTick - r.price);
-            globalPnl += priceDiff * r.quantity;
+            globalPnl += (currentPriceForTick - r.price) * r.quantity;
         });
 
         // 底層數據 (USD)
@@ -3587,44 +3602,17 @@
       }
     };
 
-    window.deleteHistoryRecord = (id) => { 
-      // 找出該筆歷史紀錄
-      const rec = tradeHistory.find(r => r.id === id);
-      if (rec) {
-         // 嘗試同步刪除當前倉位
-         let targetRecordId = id.endsWith('h') ? id.replace('h', '') : null;
-         let foundInRecords = targetRecordId ? records.find(r => r.id === targetRecordId) : null;
-         
-         if (!foundInRecords) {
-            const deleteIdNum = parseInt(id.replace(/\D/g, '')) || 0;
-            foundInRecords = records.find(r => 
-                r.ticker === rec.ticker && 
-                r.price === rec.price && 
-                r.quantity === rec.quantity && 
-                r.direction === rec.direction &&
-                !r.isMock && // 確保不誤刪模擬紀錄
-                Math.abs(parseInt(r.id) - deleteIdNum) < 5000
-            );
-         }
-         
-         if (foundInRecords) {
-            // 新增：如果同步撤銷了當前倉位，必須退還/扣回現金
-            if (!foundInRecords.isMock) {
-                const tradeCost = foundInRecords.price * foundInRecords.quantity;
-                if (foundInRecords.direction === 'long') {
-                    accountCash += tradeCost; // 退還買多現金
-                } else {
-                    accountCash -= tradeCost; // 扣回做空現金
-                }
-                accountCash = Math.round(accountCash * 10000) / 10000;
-                localStorage.setItem('stockCalcCash_PRO', accountCash);
-            }
-            records = records.filter(r => r.id !== foundInRecords.id);
-         }
-      }
-
-      tradeHistory = tradeHistory.filter(r => r.id !== id); 
-      commitDataChange(); 
+    window.deleteRecord = (id) => { 
+      showModal({
+        type: 'confirm',
+        title: '🗑️ 刪除當前倉位',
+        text: '確定要移除此筆當前倉位紀錄嗎？',
+        onConfirm: () => {
+          records = records.filter(r => r.id !== id); 
+          commitDataChange(); 
+          showToast('🗑️ 倉位已刪除', 'info');
+        }
+      });
     };
     
     window.deleteHistoryRecord = (id) => { 
@@ -3648,23 +3636,20 @@
          }
          
          if (foundInRecords) {
-            // 新增：如果同步刪除了當前倉位，必須退還現金
-            if (!foundInRecords.isMock) {
-                const tradeCost = foundInRecords.price * foundInRecords.quantity;
-                if (foundInRecords.direction === 'long') {
-                    accountCash += tradeCost; // 退還買多現金
-                } else {
-                    accountCash -= tradeCost; // 扣回做空現金
-                }
-                accountCash = Math.round(accountCash * 10000) / 10000;
-                localStorage.setItem('stockCalcCash_PRO', accountCash);
-            }
             records = records.filter(r => r.id !== foundInRecords.id);
          }
       }
 
       tradeHistory = tradeHistory.filter(r => r.id !== id); 
       commitDataChange(); 
+    };
+    
+    window.updateHistoryTrade = function(id, field, value) {
+      const record = tradeHistory.find(r => r.id === id);
+      if (record) {
+        record[field] = value === '' ? null : parseFloat(value);
+        commitDataChange(); 
+      }
     };
 
     if(els.historySearchInput) {
