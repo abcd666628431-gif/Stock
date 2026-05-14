@@ -699,9 +699,13 @@
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前成交價</span>
             <input id="currentPriceDisp" type="number" step="any" class="text-xs sm:text-sm md:text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none leading-none mt-0 md:mt-0.5 max-w-full transition-all duration-75" style="width: 4ch;">
           </div>
-          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
-            <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">平均成本</span>
-            <span id="avgPriceDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5">0</span>
+          <!-- 🌟 修改：加入點擊切換事件與模式標籤 -->
+          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center cursor-pointer transition-colors hover:bg-[#2a2a2a] group relative" onclick="toggleCostMode()" title="點擊切換 平均開倉 / 攤薄成本">
+            <div class="flex items-center mt-0">
+              <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">平均成本</span>
+              <span id="costTypeLabel" class="text-[9px] md:text-[10px] font-bold text-slate-200 bg-[#333] px-1.5 py-0.5 rounded border border-[#555] leading-none ml-1.5 shadow-sm transition-colors">開倉</span>
+            </div>
+            <span id="avgPriceDisp" class="text-xs sm:text-sm md:text-xl font-bold text-white leading-none mt-0 md:mt-0.5 transition-colors">0</span>
           </div>
           <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center">
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前總持股</span>
@@ -938,6 +942,18 @@
     // 🌟 單股面板 USD/MOP 切換
     let isDashboardMop = false;
     const MOP_RATE = 8;
+    // 🌟 單股面板 USD/MOP 切換
+    let isDashboardMop = false;
+    const MOP_RATE = 8;
+    
+    // 🌟 新增：成本計算模式切換 (false = 開倉成本, true = 攤薄成本)
+    let isDilutedCost = localStorage.getItem('stockCalcDiluted_PRO') === 'true';
+
+    window.toggleCostMode = function() {
+        isDilutedCost = !isDilutedCost;
+        localStorage.setItem('stockCalcDiluted_PRO', isDilutedCost);
+        updateDashboard(); // 重新計算並渲染看板
+    };
     
     // 🌟 全局最新價格快取：記住每個代號被抓取過的最新的價格
     // 🌟 全局最新價格快取：記住每個代號被抓取過的最新的價格
@@ -1143,11 +1159,49 @@
             symShares += r.quantity; 
             symCost += r.cost; 
         });
-        const symAvgPrice = symShares > 0 ? symCost / symShares : 0;
+
+        // 🌟 新增邏輯：計算攤薄成本所需的「歷史已實現盈虧」
+        let realizedPnl = 0;
+        tradeHistory.forEach(h => {
+            // 找出同一檔股票、且已經賣出(平倉)的歷史紀錄
+            if (h.ticker === currentSym && h.sellPrice != null) {
+                const fee = parseFloat(h.fee) || 0;
+                // 統一算法：(賣價 - 買價) * 數量 - 手續費
+                realizedPnl += (h.sellPrice - h.price) * h.quantity - fee;
+            }
+        });
+
+        // 🌟 新增邏輯：根據模式計算平均價
+        let symAvgPrice = 0;
+        if (symShares > 0) {
+            if (isDilutedCost) {
+                // 攤薄成本 = (總開倉成本 - 歷史已實現盈虧) / 剩餘股數
+                symAvgPrice = (symCost - realizedPnl) / symShares;
+            } else {
+                // 一般開倉成本 = 總開倉成本 / 剩餘股數
+                symAvgPrice = symCost / symShares;
+            }
+        }
+
+        // 🌟 更新 UI 標籤與顏色
+        const costTypeLabel = document.getElementById('costTypeLabel');
+        if (costTypeLabel) {
+            costTypeLabel.textContent = isDilutedCost ? '攤薄' : '開倉';
+            // 攤薄模式給予特別的紫色系標籤
+            costTypeLabel.className = isDilutedCost
+                ? 'text-[9px] md:text-[10px] font-bold text-[#d946ef] bg-[#d946ef]/10 px-1.5 py-0.5 rounded border border-[#d946ef]/30 leading-none ml-1.5 shadow-sm transition-colors'
+                : 'text-[9px] md:text-[10px] font-bold text-slate-200 bg-[#333] px-1.5 py-0.5 rounded border border-[#555] leading-none ml-1.5 shadow-sm transition-colors';
+        }
 
         if(els.totalSharesDisp) els.totalSharesDisp.innerHTML = maskText(formatNumber(symShares), 'dash_shares');
-        if(els.avgPriceDisp) els.avgPriceDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'dash_avg');
-
+        
+        if(els.avgPriceDisp) {
+            // 如果攤薄獲利太高導致成本變成負數 (零成本抱股)，字體變成綠色
+            const avgColor = (isDilutedCost && symAvgPrice < 0) ? 'text-[#00e676]' : 'text-white';
+            els.avgPriceDisp.className = `text-xs sm:text-sm md:text-xl font-bold ${avgColor} leading-none mt-0 md:mt-0.5 transition-colors`;
+            els.avgPriceDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'dash_avg');
+        }
+      
         const dis = symShares === 0;
         if(els.targetPriceInput) els.targetPriceInput.disabled = dis;
         if(els.percentInput) els.percentInput.disabled = dis;
