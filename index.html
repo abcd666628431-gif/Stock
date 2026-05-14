@@ -3454,8 +3454,27 @@
       if (!isNaN(c) && !isNaN(s)) {
         els.singleResult.classList.remove('hidden');
         const d = (s - c), p = (d / c) * 100, color = d >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
-        let h = `<div class="flex justify-between"><span class="text-slate-200 font-medium">價差</span><span class="font-bold ${color}">${d >= 0 ? '+' : ''}${formatNumber(d, 4)}</span></div><div class="flex justify-between mt-1"><span class="text-slate-200 font-medium">報酬</span><span class="font-bold ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}%</span></div>`;
-        if (!isNaN(q) && q > 0) h += `<div class="mt-2 pt-2 border-t border-[#555] flex justify-between"><span class="font-bold text-slate-200">總計損益</span><span class="font-bold text-sm ${color}">${d >= 0 ? '+' : ''}${formatNumber(d * q)}</span></div>`;
+        
+        // 🌟 修改：加入 text-[11px] 縮小標題字號，數字調整為 text-xs，並將顏色稍微調暗 (text-slate-400) 增加層次感
+        let h = `
+          <div class="flex justify-between items-center text-[11px]">
+            <span class="text-slate-400 font-medium">價差</span>
+            <span class="font-bold text-xs ${color}">${d >= 0 ? '+' : ''}${formatNumber(d, 4)}</span>
+          </div>
+          <div class="flex justify-between items-center mt-1 text-[11px]">
+            <span class="text-slate-400 font-medium">報酬</span>
+            <span class="font-bold text-xs ${color}">${p >= 0 ? '+' : ''}${formatNumber(p)}%</span>
+          </div>
+        `;
+        
+        if (!isNaN(q) && q > 0) {
+            // 總計損益保持原本稍微大一點的視覺重心
+            h += `
+            <div class="mt-2 pt-1.5 border-t border-[#555] flex justify-between items-center">
+              <span class="font-bold text-slate-300 text-[11px]">總計損益</span>
+              <span class="font-bold text-sm ${color}">${d >= 0 ? '+' : ''}${formatNumber(d * q)}</span>
+            </div>`;
+        }
         els.singleResult.innerHTML = h;
       } else {
         els.singleResult.classList.add('hidden');
