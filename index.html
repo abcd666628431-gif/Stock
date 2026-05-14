@@ -1204,6 +1204,9 @@
         if(els.percentInput) els.percentInput.disabled = dis;
         if(els.expectedPnlInput) els.expectedPnlInput.disabled = dis;
 
+        // 🌟 新增邏輯：根據模式決定當前要使用的「總成本」基準
+        const activeTotalCost = isDilutedCost ? (symCost - realizedPnl) : symCost;
+
         let totalPnl = 0;
 
         // --- 🌟 處理 MOP 切換與總成本/現值顯示 ---
@@ -1211,17 +1214,28 @@
         const prefix = '$'; 
         
         if(els.costCurrencyLabel) els.costCurrencyLabel.textContent = isDashboardMop ? 'MOP' : 'USD';
-        if(els.totalCostDisp) els.totalCostDisp.innerHTML = maskText(prefix + formatNumber(symCost * multiplier), 'dash_cost');
+        
+        // 🌟 總成本顯示改用連動的 activeTotalCost
+        if(els.totalCostDisp) {
+            const costColor = (isDilutedCost && activeTotalCost < 0) ? 'text-[#00e676]' : 'text-white';
+            els.totalCostDisp.className = `text-xs sm:text-sm md:text-xl font-bold ${costColor} leading-none mt-0 md:mt-0.5 transition-colors`;
+            els.totalCostDisp.innerHTML = maskText(prefix + formatNumber(activeTotalCost * multiplier), 'dash_cost');
+        }
 
         if (!isNaN(v) && symShares > 0) {
             const c = (symAvgPrice > 0 && v > symAvgPrice) ? '#00e676' : (symAvgPrice > 0 && v < symAvgPrice) ? '#ff5252' : '#fff';
             if (els.currentPriceDisp) els.currentPriceDisp.style.color = c;
 
+            // 計算純開倉的未實現盈虧 (Open PnL)
+            let openPnl = 0;
             visibleRecords.forEach(r => {
-                // 統一全部使用 (現價 - 買價) * 數量
                 const diff = (v - r.price);
-                totalPnl += diff * r.quantity;
+                openPnl += diff * r.quantity;
             });
+
+            // 🌟 根據模式決定「總盈虧」：攤薄模式下 = 開倉未實現盈虧 + 歷史已實現盈虧
+            totalPnl = isDilutedCost ? (openPnl + realizedPnl) : openPnl;
+
             const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
             const displayPnl = totalPnl * multiplier;
             
@@ -1230,14 +1244,17 @@
                 els.currentPnlAmountDisp.innerHTML = maskText((displayPnl > 0 ? '+' : '') + formatNumber(displayPnl), 'dash_pnl_amt'); 
             }
             
-            // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
-            if (symCost > 0) {
+            // 🌟 報酬率防呆：如果攤薄成本已經小於等於0，代表零成本抱股，顯示特殊標記
+            if (activeTotalCost > 0) {
               if(els.currentPnlPercentDisp) { 
                   els.currentPnlPercentDisp.style.color = color; 
-                  els.currentPnlPercentDisp.innerHTML = maskText('(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)', 'dash_pnl_pct'); 
+                  els.currentPnlPercentDisp.innerHTML = maskText('(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/activeTotalCost)*100) + '%)', 'dash_pnl_pct'); 
               }
             } else {
-              if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
+              if(els.currentPnlPercentDisp) { 
+                  els.currentPnlPercentDisp.style.color = '#00e676'; 
+                  els.currentPnlPercentDisp.innerHTML = maskText('(零成本 / 無限回報)', 'dash_pnl_pct'); 
+              }
             }
         } else {
             if(els.currentPriceDisp) els.currentPriceDisp.style.color = '#fff';
@@ -1245,7 +1262,8 @@
             if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
         }
 
-        const totalValue = symCost + totalPnl;
+        // 現值 (Total Value) 無論在哪種模式下，數學推導結果都是 activeTotalCost + totalPnl
+        const totalValue = activeTotalCost + totalPnl;
         
         if(els.totalValueDisp) {
             if (!isNaN(v) && symShares > 0) {
