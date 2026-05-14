@@ -3604,32 +3604,44 @@
       }
     };
 
-    window.deleteRecord = (id) => { 
-      showModal({
-        type: 'confirm',
-        title: '🗑️ 刪除當前倉位',
-        text: '確定要移除此筆當前倉位紀錄嗎？這將會同步退還或扣回對應的帳戶現金。',
-        onConfirm: () => {
-          // 1. 找出要刪除的紀錄
-          const targetRecord = records.find(r => r.id === id);
-          if (targetRecord && !targetRecord.isMock) {
-              // 2. 反向計算現金 (退還機制)
-              const tradeCost = targetRecord.price * targetRecord.quantity;
-              if (targetRecord.direction === 'long') {
-                  accountCash += tradeCost; // 刪除做多單：退還買入時扣除的現金
-              } else {
-                  accountCash -= tradeCost; // 刪除做空單：扣回賣出時取得的現金
-              }
-              accountCash = Math.round(accountCash * 10000) / 10000;
-              localStorage.setItem('stockCalcCash_PRO', accountCash);
-          }
+    window.deleteHistoryRecord = (id) => { 
+      // 找出該筆歷史紀錄
+      const rec = tradeHistory.find(r => r.id === id);
+      if (rec) {
+         // 嘗試同步刪除當前倉位
+         let targetRecordId = id.endsWith('h') ? id.replace('h', '') : null;
+         let foundInRecords = targetRecordId ? records.find(r => r.id === targetRecordId) : null;
+         
+         if (!foundInRecords) {
+            const deleteIdNum = parseInt(id.replace(/\D/g, '')) || 0;
+            foundInRecords = records.find(r => 
+                r.ticker === rec.ticker && 
+                r.price === rec.price && 
+                r.quantity === rec.quantity && 
+                r.direction === rec.direction &&
+                !r.isMock && // 確保不誤刪模擬紀錄
+                Math.abs(parseInt(r.id) - deleteIdNum) < 5000
+            );
+         }
+         
+         if (foundInRecords) {
+            // 新增：如果同步撤銷了當前倉位，必須退還/扣回現金
+            if (!foundInRecords.isMock) {
+                const tradeCost = foundInRecords.price * foundInRecords.quantity;
+                if (foundInRecords.direction === 'long') {
+                    accountCash += tradeCost; // 退還買多現金
+                } else {
+                    accountCash -= tradeCost; // 扣回做空現金
+                }
+                accountCash = Math.round(accountCash * 10000) / 10000;
+                localStorage.setItem('stockCalcCash_PRO', accountCash);
+            }
+            records = records.filter(r => r.id !== foundInRecords.id);
+         }
+      }
 
-          // 3. 執行刪除
-          records = records.filter(r => r.id !== id); 
-          commitDataChange(); 
-          showToast('🗑️ 倉位已刪除，現金已同步還原', 'info');
-        }
-      });
+      tradeHistory = tradeHistory.filter(r => r.id !== id); 
+      commitDataChange(); 
     };
     
     window.deleteHistoryRecord = (id) => { 
