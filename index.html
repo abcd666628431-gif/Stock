@@ -984,13 +984,6 @@
         selectTicker(activeTickers[nextIndex]);
     };
 
-    // 找出下一個代號 (如果當前沒選中，或已經是最後一個，就回到第一個)
-        let nextIndex = (currentIndex + 1) % activeTickers.length;
-        
-        // 觸發全局的股票選擇與資料抓取
-        selectTicker(activeTickers[nextIndex]);
-    };
-
     // 🌟 新增：圖表收起/展開狀態邏輯
     let isChartCollapsed = localStorage.getItem('stockCalcChartCollapsed_PRO') === 'true';
 
@@ -1010,7 +1003,7 @@
         if (isChartCollapsed) {
             wrapper.classList.add('hidden');
             icon.style.transform = 'rotate(-90deg)'; // 箭頭轉向右邊
-            headerContainer.classList.remove('mb-1.5', 'md:mb-3'); // 收起時移除底部間距讓外觀更緊湊
+            headerContainer.classList.remove('mb-1.5', 'md:mb-3'); // 收起時移除底部間距
         } else {
             wrapper.classList.remove('hidden');
             icon.style.transform = 'rotate(0deg)'; // 箭頭朝下
