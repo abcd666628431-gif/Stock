@@ -739,11 +739,15 @@
         </div>
 
         <!-- 圖表 -->
-        <div class="card-panel p-2 md:p-4 rounded-2xl flex flex-col">
-          <div class="flex justify-between items-center mb-1.5 md:mb-3">
+        <div class="card-panel p-2 md:p-4 rounded-2xl flex flex-col transition-all duration-300">
+          <!-- 🌟 修改：加入 header 點擊事件與折疊箭頭 -->
+          <div id="chartHeaderContainer" class="flex justify-between items-center mb-1.5 md:mb-3 cursor-pointer group" onclick="toggleChartVisibility()" title="點擊收起 / 展開圖表">
             <div class="flex items-center space-x-2 md:space-x-3">
-              <h2 id="chartTitle" class="text-[11px] md:text-sm font-bold text-white">即時趨勢圖</h2>
-              <select id="chartIntervalSelect" class="text-[9px] md:text-[10px] font-bold rounded-md px-1 md:px-2 py-0.5 md:py-1 outline-none cursor-pointer bg-[#2a2a2a] text-white border border-[#444]">
+              <h2 id="chartTitle" class="text-[11px] md:text-sm font-bold text-white group-hover:text-[#2979ff] transition-colors flex items-center select-none">
+                <span id="chartToggleIcon" class="mr-1.5 text-[9px] md:text-[10px] transition-transform duration-300 inline-block">▼</span> 即時趨勢圖
+              </h2>
+              <!-- 加上 onclick="event.stopPropagation()" 防止點擊選單時觸發折疊 -->
+              <select id="chartIntervalSelect" onclick="event.stopPropagation()" class="text-[9px] md:text-[10px] font-bold rounded-md px-1 md:px-2 py-0.5 md:py-1 outline-none cursor-pointer bg-[#2a2a2a] text-white border border-[#444] hover:border-[#2979ff] transition-colors">
                 <option value="1">1分</option>
                 <option value="5">5分</option>
                 <option value="15">15分</option>
@@ -751,9 +755,12 @@
                 <option value="W">週線</option>
               </select>
             </div>
-            <span id="chartDateRange" class="text-[8px] md:text-[10px] text-slate-500 font-mono hidden sm:inline">QUANTITATIVE TERMINAL</span>
+            <span id="chartDateRange" class="text-[8px] md:text-[10px] text-slate-500 font-mono hidden sm:inline select-none">QUANTITATIVE TERMINAL</span>
           </div>
-          <div id="tvchart" class="w-full h-[260px] md:h-[450px] bg-[#0F0F0F] rounded-xl overflow-hidden border border-[#333]"></div>
+          <!-- 🌟 新增 wrapper 容器，用於控制隱藏 -->
+          <div id="tvchartWrapper" class="w-full transition-all duration-300 origin-top">
+            <div id="tvchart" class="w-full h-[260px] md:h-[450px] bg-[#0F0F0F] rounded-xl overflow-hidden border border-[#333]"></div>
+          </div>
         </div>
 
         <!-- 列表 -->
@@ -975,6 +982,40 @@
         
         // 觸發全局的股票選擇與資料抓取
         selectTicker(activeTickers[nextIndex]);
+    };
+
+    // 找出下一個代號 (如果當前沒選中，或已經是最後一個，就回到第一個)
+        let nextIndex = (currentIndex + 1) % activeTickers.length;
+        
+        // 觸發全局的股票選擇與資料抓取
+        selectTicker(activeTickers[nextIndex]);
+    };
+
+    // 🌟 新增：圖表收起/展開狀態邏輯
+    let isChartCollapsed = localStorage.getItem('stockCalcChartCollapsed_PRO') === 'true';
+
+    window.toggleChartVisibility = function() {
+        isChartCollapsed = !isChartCollapsed;
+        localStorage.setItem('stockCalcChartCollapsed_PRO', isChartCollapsed);
+        applyChartVisibility();
+    };
+
+    window.applyChartVisibility = function() {
+        const wrapper = document.getElementById('tvchartWrapper');
+        const icon = document.getElementById('chartToggleIcon');
+        const headerContainer = document.getElementById('chartHeaderContainer');
+        
+        if(!wrapper || !icon || !headerContainer) return;
+
+        if (isChartCollapsed) {
+            wrapper.classList.add('hidden');
+            icon.style.transform = 'rotate(-90deg)'; // 箭頭轉向右邊
+            headerContainer.classList.remove('mb-1.5', 'md:mb-3'); // 收起時移除底部間距讓外觀更緊湊
+        } else {
+            wrapper.classList.remove('hidden');
+            icon.style.transform = 'rotate(0deg)'; // 箭頭朝下
+            headerContainer.classList.add('mb-1.5', 'md:mb-3');
+        }
     };
     
     // 🌟 全局最新價格快取：記住每個代號被抓取過的最新的價格
@@ -2291,6 +2332,9 @@
       
       // 初始化隱私模式圖標
       document.getElementById('privacyBtnIcon').innerHTML = isPrivacyMode ? svgIconEyeOff : svgIconEye;
+
+      // 🌟 初始化圖表收起/展開狀態
+      if(window.applyChartVisibility) window.applyChartVisibility();
 
       // 首次載入先渲染舊畫面防止閃爍，延後綁定 Firebase
       commitDataChange(true); 
