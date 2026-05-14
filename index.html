@@ -1210,12 +1210,107 @@
         let globalCost = 0;
         let globalPnl = 0;
 
-        // 計算所有未隱藏的股票倉位
-        records.filter(r => !r.isHidden).forEach(r => {
+        function updateDashboard() {
+        const currentSym = els.tickerInput ? els.tickerInput.value.toUpperCase().trim() : '';
+        const valStr = els.currentPriceDisp ? els.currentPriceDisp.value : '';
+        const v = parseFloat(valStr);
+
+        // 🌟 動態伸縮：當前成交價輸入框寬度
+        if(els.currentPriceDisp) {
+            const length = valStr.length > 0 ? valStr.length : 1;
+            els.currentPriceDisp.style.width = (length + 1.2) + 'ch';
+        }
+
+        // 1. 篩選出符合目前上方輸入框代號的倉位紀錄
+        const activeRecords = currentSym ? records.filter(r => r.ticker === currentSym) : [];
+        
+        // 2. 🌟 剔除已被使用者臨時隱藏的紀錄
+        const visibleRecords = activeRecords.filter(r => !r.isHidden);
+        
+        let symShares = 0, symCost = 0;
+        visibleRecords.forEach(r => { 
+            symShares += r.quantity; 
+            symCost += r.cost; 
+        });
+        const symAvgPrice = symShares > 0 ? symCost / symShares : 0;
+
+        if(els.totalSharesDisp) els.totalSharesDisp.innerHTML = maskText(formatNumber(symShares), 'dash_shares');
+        if(els.avgPriceDisp) els.avgPriceDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'dash_avg');
+
+        const dis = symShares === 0;
+        if(els.targetPriceInput) els.targetPriceInput.disabled = dis;
+        if(els.percentInput) els.percentInput.disabled = dis;
+        if(els.expectedPnlInput) els.expectedPnlInput.disabled = dis;
+
+        let totalPnl = 0;
+
+        // --- 🌟 處理 MOP 切換與總成本/現值顯示 ---
+        const multiplier = isDashboardMop ? MOP_RATE : 1;
+        const prefix = '$'; 
+        
+        if(els.costCurrencyLabel) els.costCurrencyLabel.textContent = isDashboardMop ? 'MOP' : 'USD';
+        if(els.totalCostDisp) els.totalCostDisp.innerHTML = maskText(prefix + formatNumber(symCost * multiplier), 'dash_cost');
+
+        if (!isNaN(v) && symShares > 0) {
+            const c = (symAvgPrice > 0 && v > symAvgPrice) ? '#00e676' : (symAvgPrice > 0 && v < symAvgPrice) ? '#ff5252' : '#fff';
+            if (els.currentPriceDisp) els.currentPriceDisp.style.color = c;
+
+            visibleRecords.forEach(r => {
+                // 單一標的面板統一使用 (現價 - 買價) * 數量，供使用者快速察看波動
+                const diff = (v - r.price);
+                totalPnl += diff * r.quantity;
+            });
+            const color = totalPnl >= 0 ? '#00e676' : '#ff5252';
+            const displayPnl = totalPnl * multiplier;
+            
+            if(els.currentPnlAmountDisp) { 
+                els.currentPnlAmountDisp.style.color = color; 
+                els.currentPnlAmountDisp.innerHTML = maskText((displayPnl > 0 ? '+' : '') + formatNumber(displayPnl), 'dash_pnl_amt'); 
+            }
+            
+            // 安全防護：避免 symCost 為 0 導致的 NaN 或 Infinity 錯誤
+            if (symCost > 0) {
+              if(els.currentPnlPercentDisp) { 
+                  els.currentPnlPercentDisp.style.color = color; 
+                  els.currentPnlPercentDisp.innerHTML = maskText('(' + (totalPnl > 0 ? '+' : '') + formatNumber((totalPnl/symCost)*100) + '%)', 'dash_pnl_pct'); 
+              }
+            } else {
+              if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = color; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
+            }
+        } else {
+            if(els.currentPriceDisp) els.currentPriceDisp.style.color = '#fff';
+            if(els.currentPnlAmountDisp) { els.currentPnlAmountDisp.style.color = '#718096'; els.currentPnlAmountDisp.innerHTML = maskText('-', 'dash_pnl_amt'); }
+            if(els.currentPnlPercentDisp) { els.currentPnlPercentDisp.style.color = '#718096'; els.currentPnlPercentDisp.innerHTML = maskText('(-)', 'dash_pnl_pct'); }
+        }
+
+        const totalValue = symCost + totalPnl;
+        
+        if(els.totalValueDisp) {
+            if (!isNaN(v) && symShares > 0) {
+               els.totalValueDisp.innerHTML = '現值: ' + maskText(prefix + formatNumber(totalValue * multiplier), 'dash_val');
+               els.totalValueDisp.className = `text-[8px] md:text-[10px] font-bold leading-none mt-0.5 md:mt-1 ${totalPnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]'}`;
+            } else {
+               els.totalValueDisp.innerHTML = '現值: ' + maskText(prefix + formatNumber(symCost * multiplier), 'dash_val');
+               els.totalValueDisp.className = 'text-[8px] md:text-[10px] font-bold text-slate-400 leading-none mt-0.5 md:mt-1';
+            }
+        }
+
+        // 🌟 計算帳戶全局總資產 (包含現金)
+        let globalCost = 0;
+        let globalPnl = 0;
+
+        // 🌟 修復核心：排除被隱藏的倉位，並且「嚴格排除模擬單 (!r.isMock)」，防止資產虛增
+        records.filter(r => !r.isHidden && !r.isMock).forEach(r => {
             globalCost += r.cost;
             const currentPriceForTick = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) 
                                         ? latestPrices[r.ticker] : r.price;
-            globalPnl += (currentPriceForTick - r.price) * r.quantity;
+            
+            // 🌟 修復核心：精準區分做多與做空的盈虧方向算法
+            if (r.direction === 'short') {
+                globalPnl += (r.price - currentPriceForTick) * r.quantity;
+            } else {
+                globalPnl += (currentPriceForTick - r.price) * r.quantity;
+            }
         });
 
         // 底層數據 (USD)
@@ -3606,11 +3701,24 @@
       showModal({
         type: 'confirm',
         title: '🗑️ 刪除當前倉位',
-        text: '確定要移除此筆當前倉位紀錄嗎？',
+        text: '確定要移除此筆當前倉位紀錄嗎？<br><br><span class="text-emerald-400 text-[11px] font-bold">系統將會自動把此筆交易的本金退回至您的帳戶現金中，以確保總資產平衡。</span>',
         onConfirm: () => {
+          // 🌟 修復核心：刪除真實倉位時，必須退回購買時扣除的現金
+          const rec = records.find(r => r.id === id);
+          if (rec && !rec.isMock) {
+              if (rec.direction === 'short') {
+                  accountCash -= rec.cost; // 做空平倉是花現金買回，刪除紀錄時扣回
+              } else {
+                  accountCash += rec.cost; // 做多平倉是獲得現金，刪除紀錄時加回
+              }
+              // 處理浮點數誤差並存儲
+              accountCash = Math.round(accountCash * 10000) / 10000;
+              localStorage.setItem('stockCalcCash_PRO', accountCash);
+          }
+
           records = records.filter(r => r.id !== id); 
           commitDataChange(); 
-          showToast('🗑️ 倉位已刪除', 'info');
+          showToast('🗑️ 倉位已刪除，資金已退回', 'info');
         }
       });
     };
@@ -3636,6 +3744,17 @@
          }
          
          if (foundInRecords) {
+            // 🌟 修復核心：連帶刪除當前真實倉位時，同樣需要退回現金
+            if (!foundInRecords.isMock) {
+                if (foundInRecords.direction === 'short') {
+                    accountCash -= foundInRecords.cost;
+                } else {
+                    accountCash += foundInRecords.cost;
+                }
+                // 處理浮點數誤差並存儲
+                accountCash = Math.round(accountCash * 10000) / 10000;
+                localStorage.setItem('stockCalcCash_PRO', accountCash);
+            }
             records = records.filter(r => r.id !== foundInRecords.id);
          }
       }
