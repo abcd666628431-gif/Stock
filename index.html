@@ -696,11 +696,14 @@
         <!-- 核心看板 (極限壓縮為一行 5 欄) -->
         <div class="grid grid-cols-5 gap-1 md:gap-3">
           <!-- 🌟 修改：加入點擊切換股票事件與股票代號標籤 -->
-          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center relative overflow-hidden cursor-pointer transition-colors hover:bg-[#2a2a2a] group" onclick="cycleCurrentTicker()" title="點擊切換至下一檔持股">
+          <div class="card-panel px-1 md:px-3 py-1 md:py-1.5 rounded-lg flex flex-col justify-center relative overflow-hidden cursor-pointer transition-colors hover:bg-[#2a2a2a] group" 
+               onmousedown="window._dragStartX = event.clientX; window._dragStartY = event.clientY;" 
+               onmouseup="if(Math.abs(event.clientX - window._dragStartX) < 5 && Math.abs(event.clientY - window._dragStartY) < 5) cycleCurrentTicker();" 
+               title="點擊切換至下一檔持股">
             <span class="text-slate-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider whitespace-nowrap origin-left scale-90 md:scale-100">當前成交價</span>
             <div class="flex items-baseline mt-0 md:mt-0.5">
-              <!-- 加入 event.stopPropagation() 確保點擊輸入框時可以手動改價，不會觸發切換 -->
-              <input id="currentPriceDisp" type="number" step="any" class="text-xs sm:text-sm md:text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none leading-none max-w-full transition-all duration-75" style="width: 4ch;" onclick="event.stopPropagation()">
+              <input id="currentPriceDisp" type="number" step="any" class="text-xs sm:text-sm md:text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none leading-none max-w-full transition-all duration-75" style="width: 4ch;" 
+                     onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onmouseup="event.stopPropagation()">
               <span id="currentPriceTickerLabel" class="text-[9px] md:text-[11px] font-bold text-[#2979ff] ml-1 opacity-80 leading-none"></span>
             </div>
           </div>
