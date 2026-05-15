@@ -3296,6 +3296,8 @@
         }
       } catch (err) { 
         console.error(err); 
+        // 🌟 新增：當遇到網路斷線或 QUIC 錯誤時，在畫面上跳出提示
+        showToast('網路連線異常或伺服器無回應，請檢查網路狀態', 'error');
       } finally { 
         if(els.fetchBtn) { els.fetchBtn.textContent = "抓取"; els.fetchBtn.disabled = false; }
       }
