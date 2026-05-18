@@ -2052,13 +2052,11 @@
         const rec = records.find(r => r.id === id);
         if(!rec) return;
         
-        // 尋找該代號+方向的「所有」持倉，計算總數與均價
         const matchingRecords = records.filter(r => r.ticker === rec.ticker && r.direction === rec.direction && !r.isHidden);
         const totalQty = matchingRecords.reduce((sum, r) => sum + r.quantity, 0);
         const totalCost = matchingRecords.reduce((sum, r) => sum + r.cost, 0);
         const avgPrice = totalQty > 0 ? totalCost / totalQty : 0;
         
-        // 借用隱藏欄位存 ticker 和 direction，格式為 "AAPL|long"
         els.cpId.value = rec.ticker + '|' + rec.direction; 
         document.getElementById('cpSymbolDisp').textContent = rec.ticker + (rec.direction === 'short' ? ' (做空)' : ' (做多)');
         document.getElementById('cpBuyPriceDisp').textContent = formatNumber(avgPrice, 4);
@@ -2093,13 +2091,11 @@
             const totalFee = els.cpFee.value ? parseFloat(els.cpFee.value) : 0;
             const dateVal = els.cpDate.value;
             
-            // 抓出所有匹配的紀錄 (先進先出：依據時間/ID排序)
             let matchingRecords = records.filter(r => r.ticker === ticker && r.direction === direction && !r.isHidden)
                                          .sort((a,b) => parseInt(a.id) - parseInt(b.id));
             
             const totalAvailableQty = matchingRecords.reduce((sum, r) => sum + r.quantity, 0);
             
-            // 賣出防呆
             if (sellQty <= 0 || sellQty > (totalAvailableQty + 0.000001)) {
                 return showToast('賣出數量錯誤，不可大於總可平倉數量', 'error');
             }
@@ -2109,14 +2105,12 @@
             
             let remainingSellQty = sellQty;
 
-            // 執行 FIFO 迴圈智能扣除
             for (let i = 0; i < matchingRecords.length && remainingSellQty > 0.000001; i++) {
                 let lot = matchingRecords[i];
                 let deductQty = Math.min(lot.quantity, remainingSellQty);
                 let isFullClose = Math.abs(lot.quantity - deductQty) < 0.000001; 
                 let currentFee = Math.round(((deductQty / sellQty) * totalFee) * 10000) / 10000;
 
-                // 處理當前倉位
                 if (isFullClose) {
                     records = records.filter(r => r.id !== lot.id);
                 } else {
@@ -2125,22 +2119,17 @@
                     actualLot.cost = actualLot.price * actualLot.quantity;
                 }
 
-                // 處理歷史紀錄
                 if (!lot.isMock) { 
                     let histRec = tradeHistory.find(h => h.id === lot.id + 'h');
                     if (!histRec) { 
                         const editIdNum = parseInt(lot.id.replace(/\D/g, '')) || 0;
                         histRec = tradeHistory.find(h => 
-                            h.ticker === lot.ticker && 
-                            h.price === lot.price && 
-                            h.direction === lot.direction &&
-                            Math.abs(parseInt(h.id) - editIdNum) < 5000 &&
-                            h.sellPrice == null 
+                            h.ticker === lot.ticker && h.price === lot.price && h.direction === lot.direction &&
+                            Math.abs(parseInt(h.id) - editIdNum) < 5000 && h.sellPrice == null 
                         );
                     }
 
                     const newHistoryId = Date.now().toString() + Math.floor(Math.random()*1000) + 'h';
-
                     if (isFullClose) {
                         if (histRec && histRec.sellPrice == null) {
                             histRec.sellPrice = sellPrice;
@@ -2170,17 +2159,13 @@
                 remainingSellQty = Math.round((remainingSellQty - deductQty) * 1000000) / 1000000;
             }
 
-            // 更新現金
             const grossAmount = sellPrice * sellQty;
-            if (direction === 'short') {
-                accountCash -= (grossAmount + totalFee);
-            } else {
-                accountCash += (grossAmount - totalFee);
-            }
+            if (direction === 'short') accountCash -= (grossAmount + totalFee);
+            else accountCash += (grossAmount - totalFee);
+            
             accountCash = Math.round(accountCash * 10000) / 10000;
             localStorage.setItem('stockCalcCash_PRO', accountCash);
 
-            // 更新歷史排序與保存
             tradeHistory.sort((a,b) => {
                 let timeA = a.dateStr ? new Date(a.dateStr).getTime() : parseInt(a.id);
                 let timeB = b.dateStr ? new Date(b.dateStr).getTime() : parseInt(b.id);
@@ -2190,8 +2175,7 @@
 
             commitDataChange();
             closeClosePositionModal();
-            const isTotalClose = (sellQty === totalAvailableQty);
-            showToast(isTotalClose ? `✅ ${ticker} 已全數平倉結算` : `✅ 已智能平倉 ${sellQty} 股 (FIFO)`, 'success');
+            showToast('✅ 智能平倉完成', 'success');
         });
     }
 
