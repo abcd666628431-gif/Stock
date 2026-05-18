@@ -221,8 +221,8 @@
         <div class="grid grid-cols-2 gap-3">
           <div class="col-span-2 flex justify-between text-slate-300 text-[11px] font-bold bg-[#2a2a2a] p-2.5 rounded-lg border border-[#444] shadow-inner">
             <span id="cpSymbolDisp" class="text-[#2979ff] text-xs"></span>
-            <span>成本價: <span id="cpBuyPriceDisp" class="text-white"></span></span>
-            <span>可平倉: <span id="cpMaxQtyDisp" class="text-white"></span></span>
+            <span>均價: <span id="cpBuyPriceDisp" class="text-white"></span></span>
+            <span>總可平倉: <span id="cpMaxQtyDisp" class="text-white"></span></span>
           </div>
           <div class="col-span-2">
             <label class="block text-[11px] font-bold text-slate-400 mb-1">交易日期</label>
@@ -242,7 +242,7 @@
           </div>
         </div>
         <div class="text-[10px] text-slate-400 mt-3 bg-slate-800/50 p-2 rounded border border-[#333]">
-          💡 <b>自動拆單機制：</b>若「賣出數量」小於全部庫存，系統會自動結算賣出部分並留存剩餘倉位。
+          💡 <b>智能 FIFO 拆單機制：</b>依據「先進先出」原則，自動從最早買入的歷史單開始扣除股數結算，剩下的自動保留。
         </div>
         <div class="flex justify-end space-x-3 mt-4 pt-2 border-t border-[#333]">
           <button type="button" onclick="closeClosePositionModal()" class="px-4 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-white hover:bg-[#333] transition-colors">取消</button>
@@ -2047,21 +2047,28 @@
       });
     });
 
-    // 🌟 平倉 / 部分平倉 核心邏輯 🌟
+    // 🌟 平倉 / 部分平倉 (智能 FIFO) 核心邏輯 🌟
     window.openClosePositionModal = function(id) {
         const rec = records.find(r => r.id === id);
         if(!rec) return;
         
-        els.cpId.value = rec.id;
+        // 🌟 尋找該代號+方向的「所有」持倉，計算總數與均價
+        const matchingRecords = records.filter(r => r.ticker === rec.ticker && r.direction === rec.direction && !r.isHidden);
+        const totalQty = matchingRecords.reduce((sum, r) => sum + r.quantity, 0);
+        const totalCost = matchingRecords.reduce((sum, r) => sum + r.cost, 0);
+        const avgPrice = totalQty > 0 ? totalCost / totalQty : 0;
+        
+        // 借用隱藏欄位存 ticker 和 direction，格式為 "AAPL|long"
+        els.cpId.value = rec.ticker + '|' + rec.direction; 
         document.getElementById('cpSymbolDisp').textContent = rec.ticker + (rec.direction === 'short' ? ' (做空)' : ' (做多)');
-        document.getElementById('cpBuyPriceDisp').textContent = formatNumber(rec.price, 4);
-        document.getElementById('cpMaxQtyDisp').textContent = formatNumber(rec.quantity);
+        document.getElementById('cpBuyPriceDisp').textContent = formatNumber(avgPrice, 4);
+        document.getElementById('cpMaxQtyDisp').textContent = formatNumber(totalQty);
         
         els.cpDate.value = getLocalDateString();
-        els.cpSellQty.value = rec.quantity;
-        els.cpSellQty.max = rec.quantity;
+        els.cpSellQty.value = totalQty;
+        els.cpSellQty.max = totalQty; // 最大值限制為總數量
         
-        // 🌟 帶入全局緩存中的最新價格
+        // 帶入全局緩存中的最新價格
         const savedPrice = latestPrices[rec.ticker];
         els.cpSellPrice.value = (savedPrice !== undefined && !isNaN(savedPrice)) ? savedPrice : '';
         els.cpFee.value = '';
@@ -2078,19 +2085,126 @@
     if(els.closePositionForm) {
       els.closePositionForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const id = els.cpId.value;
+        
+        // 取得剛剛綁定的 ticker 與 direction
+        const idVal = els.cpId.value; 
+        const [ticker, direction] = idVal.split('|');
+        
         const sellQty = parseFloat(els.cpSellQty.value);
         const sellPrice = parseFloat(els.cpSellPrice.value);
-        const fee = els.cpFee.value ? parseFloat(els.cpFee.value) : 0;
+        const totalFee = els.cpFee.value ? parseFloat(els.cpFee.value) : 0;
         const dateVal = els.cpDate.value;
         
-        const recIndex = records.findIndex(r => r.id === id);
-        if(recIndex === -1) return;
-        const rec = records[recIndex];
+        // 🌟 抓出所有匹配的紀錄 (先進先出：依據時間/ID排序，ID越小代表越早買入)
+        let matchingRecords = records.filter(r => r.ticker === ticker && r.direction === direction && !r.isHidden)
+                                     .sort((a,b) => parseInt(a.id) - parseInt(b.id));
         
-        if (sellQty <= 0 || sellQty > rec.quantity) {
-            return showToast('賣出數量錯誤，不可大於可平倉數量', 'error');
+        const totalAvailableQty = matchingRecords.reduce((sum, r) => sum + r.quantity, 0);
+        
+        // 加入微小容差，避免浮點數導致判斷大於總量
+        if (sellQty <= 0 || sellQty > (totalAvailableQty + 0.000001)) {
+            return showToast('賣出數量錯誤，不可大於總可平倉數量', 'error');
         }
+
+        const dateObj = new Date(dateVal);
+        const timeStr = dateObj.toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'});
+        
+        let remainingSellQty = sellQty;
+
+        // 🌟 執行 FIFO 迴圈智能扣除 (加入 JS 浮點數精度校正)
+        for (let i = 0; i < matchingRecords.length && remainingSellQty > 0.000001; i++) {
+            let lot = matchingRecords[i];
+            let deductQty = Math.min(lot.quantity, remainingSellQty);
+            
+            // 使用容差判斷是否為「完全平倉」，防止 0.00000001 的幽靈碎股
+            let isFullClose = Math.abs(lot.quantity - deductQty) < 0.000001; 
+            
+            // 將總手續費依據此次扣除的股數比例分攤，並四捨五入至小數點後 4 位
+            let currentFee = Math.round(((deductQty / sellQty) * totalFee) * 10000) / 10000;
+
+            // --- 1. 處理當前倉位 (更新 records 看板) ---
+            if (isFullClose) {
+                records = records.filter(r => r.id !== lot.id); // 全扣完，刪除這筆
+            } else {
+                let actualLot = records.find(r => r.id === lot.id);
+                // 精度校正：確保剩下的股數乾淨
+                actualLot.quantity = Math.round((actualLot.quantity - deductQty) * 1000000) / 1000000;
+                actualLot.cost = actualLot.price * actualLot.quantity;
+            }
+
+            // --- 2. 處理歷史紀錄 (更新 tradeHistory) ---
+            if (!lot.isMock) { 
+                let histRec = tradeHistory.find(h => h.id === lot.id + 'h');
+                if (!histRec) { 
+                    const editIdNum = parseInt(lot.id.replace(/\D/g, '')) || 0;
+                    histRec = tradeHistory.find(h => 
+                        h.ticker === lot.ticker && 
+                        h.price === lot.price && 
+                        h.direction === lot.direction &&
+                        Math.abs(parseInt(h.id) - editIdNum) < 5000 &&
+                        h.sellPrice == null 
+                    );
+                }
+
+                const newHistoryId = Date.now().toString() + Math.floor(Math.random()*1000) + 'h';
+
+                if (isFullClose) {
+                    if (histRec && histRec.sellPrice == null) {
+                        histRec.sellPrice = sellPrice;
+                        histRec.fee = Math.round(((histRec.fee || 0) + currentFee) * 10000) / 10000;
+                        histRec.dateStr = dateVal;
+                        histRec.time = timeStr;
+                        tradeHistory = tradeHistory.filter(h => h.id !== histRec.id);
+                        tradeHistory.unshift(histRec);
+                    } else {
+                        tradeHistory.unshift({
+                            id: newHistoryId, time: timeStr, dateStr: dateVal,
+                            ticker: lot.ticker, price: lot.price, quantity: deductQty,
+                            sellPrice: sellPrice, fee: currentFee, direction: lot.direction || 'long'
+                        });
+                    }
+                } else {
+                    if (histRec && histRec.sellPrice == null) {
+                        histRec.quantity = Math.round((histRec.quantity - deductQty) * 1000000) / 1000000; 
+                    }
+                    tradeHistory.unshift({
+                        id: newHistoryId, time: timeStr, dateStr: dateVal,
+                        ticker: lot.ticker, price: lot.price, quantity: deductQty,
+                        sellPrice: sellPrice, fee: currentFee, direction: lot.direction || 'long'
+                    });
+                }
+            }
+            
+            // 精度校正：準備進入下一個迴圈
+            remainingSellQty = Math.round((remainingSellQty - deductQty) * 1000000) / 1000000;
+        }
+
+        // 🌟 3. 計算全局帳戶現金變動
+        const grossAmount = sellPrice * sellQty;
+        if (direction === 'short') {
+            accountCash -= (grossAmount + totalFee);
+        } else {
+            accountCash += (grossAmount - totalFee);
+        }
+        accountCash = Math.round(accountCash * 10000) / 10000;
+        localStorage.setItem('stockCalcCash_PRO', accountCash);
+
+        // 確保歷史紀錄依據時間正確排序
+        tradeHistory.sort((a,b) => {
+            let timeA = a.dateStr ? new Date(a.dateStr).getTime() : parseInt(a.id);
+            let timeB = b.dateStr ? new Date(b.dateStr).getTime() : parseInt(b.id);
+            if (timeA === timeB) return parseInt(b.id) - parseInt(a.id);
+            return timeB - timeA; 
+        });
+
+        // 儲存並更新畫面
+        commitDataChange();
+        closeClosePositionModal();
+        
+        const isTotalClose = (sellQty === totalAvailableQty);
+        showToast(isTotalClose ? `✅ ${ticker} 已全數平倉結算` : `✅ 已智能平倉 ${sellQty} 股 (FIFO)`, 'success');
+      });
+    }
 
         const isFullClose = (sellQty === rec.quantity);
         const dateObj = new Date(dateVal);
