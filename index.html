@@ -3727,13 +3727,13 @@
     }
 
     // 修改預算上限時，重新計算拉桿比例
+    // 修改預算上限時，重新計算拉桿比例
     if (budgetInput) {
         budgetInput.addEventListener('change', updatePreviewAvgCost);
     }
     
     // 🌟 監聽手續費輸入，即時更新成本預覽
     if(els.buyFeeInput) els.buyFeeInput.addEventListener('input', updatePreviewAvgCost);
-}
     
     // 🌟 統一：處理新增一般紀錄與模擬紀錄
     function handleAddRecord(isMock) {
