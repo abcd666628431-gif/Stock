@@ -1312,7 +1312,7 @@
             els.avgPriceDisp.className = `text-xs sm:text-sm md:text-xl font-bold ${avgColor} leading-none mt-0 md:mt-0.5 transition-colors`;
             els.avgPriceDisp.innerHTML = maskText(formatNumber(symAvgPrice, 4), 'dash_avg');
         }
-      
+       
         const dis = symShares === 0;
         if(els.targetPriceInput) els.targetPriceInput.disabled = dis;
         if(els.percentInput) els.percentInput.disabled = dis;
@@ -1460,7 +1460,6 @@
                     <div class="flex items-center space-x-2">
                         <div class="flex flex-col items-end space-y-1">
                             <span class="text-[16px] font-bold leading-none ${gColor}">${mopStr}</span>
-                            
                             <span class="text-[12px] font-medium ${gColorUSD} leading-none">${usdStr}</span>
                         </div>
                         <span class="text-[9px] font-bold opacity-90 ${gColor}">${pctStr}</span>
@@ -1471,8 +1470,58 @@
                     <div class="flex items-center space-x-2">
                         <div class="flex flex-col items-end space-y-1">
                             <span class="text-[16px] font-bold leading-none text-slate-500">${maskText('-', 'global_pnl_mop')}</span>
-                            
                             <span class="text-[12px] font-medium text-slate-600 leading-none">${maskText('(-)', 'global_pnl_usd')}</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-slate-600">(-)</span>
+                    </div>
+                `;
+            }
+        }
+
+        // --- 🌟 計算本日盈虧 (Realized Daily PnL) ---
+        const todayStr = getLocalDateString(); 
+        let dailyPnlUSD = 0;
+        let dailyTotalCost = 0;
+
+        tradeHistory.forEach(h => {
+            // 只有「今天」且「已填寫賣出價」的紀錄才計算
+            if (h.dateStr === todayStr && h.sellPrice != null) {
+                const fee = parseFloat(h.fee) || 0;
+                const pnl = (h.sellPrice - h.price) * h.quantity - fee;
+                dailyPnlUSD += pnl;
+                dailyTotalCost += (h.price * h.quantity);
+            }
+        });
+
+        const dailyPnLContainer = document.getElementById('dailyPnLContainer');
+        if (dailyPnLContainer) {
+            // 如果今天有賣出結算的紀錄
+            if (dailyTotalCost > 0 || dailyPnlUSD !== 0) {
+                const dColor = dailyPnlUSD >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+                const dColorUSD = dailyPnlUSD >= 0 ? 'text-emerald-700' : 'text-rose-700';
+                const dSign = dailyPnlUSD > 0 ? '+' : '';
+                const dPct = dailyTotalCost > 0 ? (dailyPnlUSD / dailyTotalCost) * 100 : 0;
+
+                const mopStr = maskText(`${dSign}${formatNumber(dailyPnlUSD * MOP_RATE)}`, 'daily_pnl_mop');
+                const usdStr = maskText(`(${dSign}${formatNumber(dailyPnlUSD)})`, 'daily_pnl_usd');
+                const pctStr = maskText(`(${dSign}${formatNumber(dPct)}%)`, 'daily_pnl_pct');
+
+                dailyPnLContainer.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="text-[16px] font-bold leading-none ${dColor}">${mopStr}</span>
+                            <span class="text-[12px] font-medium ${dColorUSD} leading-none">${usdStr}</span>
+                        </div>
+                        <span class="text-[9px] font-bold opacity-90 ${dColor}">${pctStr}</span>
+                    </div>
+                `;
+            } else {
+                // 如果今天沒有賣出任何股票
+                dailyPnLContainer.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="text-[16px] font-bold leading-none text-slate-500">${maskText('-', 'daily_pnl_mop')}</span>
+                            <span class="text-[12px] font-medium text-slate-600 leading-none">${maskText('(-)', 'daily_pnl_usd')}</span>
                         </div>
                         <span class="text-[9px] font-bold text-slate-600">(-)</span>
                     </div>
