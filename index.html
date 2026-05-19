@@ -862,7 +862,9 @@
             <div class="flex justify-between items-start mb-4">
               <div>
                 <h3 class="text-lg font-bold text-white flex items-center mb-1">盈虧明細 (<span id="detailsCurrencyLabel">USD</span>)</h3>
-                <div class="flex items-center bg-[#2a2a2a] p-1 rounded-full w-fit border border-[#333] shadow-sm">
+                <div id="detailsTotalSumContainer" class="cursor-pointer text-sm font-bold mb-2 transition-colors select-none" onclick="setDetailsFilter(activeDetailsFilter === 'profit' ? 'loss' : 'profit')">
+                  </div>
+                <div class="flex items-center bg-[#2a2a2a] p-1 rounded-full w-fit border border-[#333] shadow-sm mt-1">
                   <button id="btnFilterProfit" onclick="setDetailsFilter('profit')" class="px-5 py-1.5 rounded-full text-xs font-bold bg-white text-black transition-all">盈利</button>
                   <button id="btnFilterLoss" onclick="setDetailsFilter('loss')" class="px-5 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white transition-all">虧損</button>
                 </div>
@@ -1405,22 +1407,29 @@
                 const gSign = globalPnl > 0 ? '+' : '';
                 const gPct = (globalPnl / globalCost) * 100;
                 
-                // MOP 在上，USD 和百分比在下
+                // 重新排版：數值在左直排，百分比在右垂直置中
                 const mopStr = maskText(`${gSign}${formatNumber(globalPnlMOP)}`, 'global_pnl_mop');
                 const usdStr = maskText(`(${gSign}${formatNumber(globalPnl)})`, 'global_pnl_usd');
                 const pctStr = maskText(`(${gSign}${formatNumber(gPct)}%)`, 'global_pnl_pct');
 
                 globalTotalPnlContainer.innerHTML = `
-                    <span class="text-xs md:text-sm font-bold leading-none ${gColor} mb-1">${mopStr}</span>
-                    <div class="flex items-center space-x-1.5 leading-none">
-                        <span class="text-[9px] md:text-[10px] font-medium ${gColorUSD}">${usdStr}</span>
-                        <span class="text-[9px] opacity-80 ${gColor}">${pctStr}</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="text-xs md:text-sm font-bold leading-none ${gColor}">${mopStr}</span>
+                            <span class="text-[9px] md:text-[10px] font-medium ${gColorUSD} leading-none">${usdStr}</span>
+                        </div>
+                        <span class="text-[10px] md:text-xs font-bold opacity-90 ${gColor}">${pctStr}</span>
                     </div>
                 `;
             } else {
                 globalTotalPnlContainer.innerHTML = `
-                    <span class="text-xs md:text-sm font-bold leading-none text-slate-500 mb-1">${maskText('-', 'global_pnl_mop')}</span>
-                    <span class="text-[9px] md:text-[10px] font-medium text-slate-600 leading-none">${maskText('(-)', 'global_pnl_usd')}</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="text-xs md:text-sm font-bold leading-none text-slate-500">${maskText('-', 'global_pnl_mop')}</span>
+                            <span class="text-[9px] md:text-[10px] font-medium text-slate-600 leading-none">${maskText('(-)', 'global_pnl_usd')}</span>
+                        </div>
+                        <span class="text-[10px] md:text-xs font-bold text-slate-600">(-)</span>
+                    </div>
                 `;
             }
         }
@@ -3097,24 +3106,52 @@
       if (els.detailsUpdateTime) els.detailsUpdateTime.textContent = now.toLocaleDateString('zh-TW', {month:'2-digit', day:'2-digit'}) + ' ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
       const aggregated = {};
+      
+      // 1. 處理已實現盈虧 (歷史紀錄)
       tradeHistory.forEach(r => {
         const sPrice = parseFloat(r.sellPrice);
         if (isNaN(sPrice)) return;
 
         const fee = parseFloat(r.fee) || 0;
-        
-        // 🌟 移除多空反向邏輯，統一為 (賣價 - 買價)
         const pnl = (sPrice - r.price) * r.quantity - fee;
 
         if (!aggregated[r.ticker]) aggregated[r.ticker] = 0;
         aggregated[r.ticker] += pnl;
       });
 
+      // 2. 處理未實現盈虧 (當前倉位) - 新增邏輯
+      records.filter(r => !r.isHidden).forEach(r => {
+        const currentPrice = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) ? latestPrices[r.ticker] : r.price;
+        const pnl = (currentPrice - r.price) * r.quantity; // 未平倉不計算賣出手續費
+        
+        if (!aggregated[r.ticker]) aggregated[r.ticker] = 0;
+        aggregated[r.ticker] += pnl;
+      });
+
       const profitList = [];
       const lossList = [];
+      let totalProfitSum = 0;
+      let totalLossSum = 0;
+
       for (const ticker in aggregated) {
-        if (aggregated[ticker] > 0) profitList.push({ ticker, pnl: aggregated[ticker] });
-        else if (aggregated[ticker] < 0) lossList.push({ ticker, pnl: aggregated[ticker] });
+        if (aggregated[ticker] > 0) {
+            profitList.push({ ticker, pnl: aggregated[ticker] });
+            totalProfitSum += aggregated[ticker];
+        }
+        else if (aggregated[ticker] < 0) {
+            lossList.push({ ticker, pnl: aggregated[ticker] });
+            totalLossSum += aggregated[ticker];
+        }
+      }
+
+      // 3. 更新介面上的總計文字與切換提示
+      const detailsTotalSumContainer = document.getElementById('detailsTotalSumContainer');
+      if (detailsTotalSumContainer) {
+          if (activeDetailsFilter === 'profit') {
+              detailsTotalSumContainer.innerHTML = `總計盈利: <span class="text-[#00e676]">+${formatNumber(totalProfitSum * multiplier)}</span> <span class="text-[10px] text-slate-500 font-normal ml-1 hover:text-white transition-colors">🔄 切換虧損</span>`;
+          } else {
+              detailsTotalSumContainer.innerHTML = `總計虧損: <span class="text-[#ff5252]">${formatNumber(totalLossSum * multiplier)}</span> <span class="text-[10px] text-slate-500 font-normal ml-1 hover:text-white transition-colors">🔄 切換盈利</span>`;
+          }
       }
 
       profitList.sort((a, b) => b.pnl - a.pnl);
