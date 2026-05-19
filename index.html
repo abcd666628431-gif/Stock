@@ -685,7 +685,7 @@
              </div>
              
              <div class="flex flex-col shrink-0 pointer-events-none items-end min-w-[90px]">
-               <span class="text-[12px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
+               <span class="text-[9px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
                <div id="globalTotalPnlContainer" class="flex flex-col items-end">
                   <span class="text-xs md:text-sm font-bold leading-none text-slate-500">-</span>
                </div>
@@ -1407,7 +1407,7 @@
                 const gSign = globalPnl > 0 ? '+' : '';
                 const gPct = (globalPnl / globalCost) * 100;
                 
-                // 重新排版：數值在左直排，百分比在右垂直置中
+                // MOP 在上，USD 在下，百分比在右
                 const mopStr = maskText(`${gSign}${formatNumber(globalPnlMOP)}`, 'global_pnl_mop');
                 const usdStr = maskText(`(${gSign}${formatNumber(globalPnl)})`, 'global_pnl_usd');
                 const pctStr = maskText(`(${gSign}${formatNumber(gPct)}%)`, 'global_pnl_pct');
@@ -1415,20 +1415,22 @@
                 globalTotalPnlContainer.innerHTML = `
                     <div class="flex items-center space-x-2">
                         <div class="flex flex-col items-end space-y-1">
-                            <span class="text-xs md:text-sm font-bold leading-none ${gColor}">${mopStr}</span>
-                            <span class="text-[8px] md:text-[10px] font-medium ${gColorUSD} leading-none">${usdStr}</span>
+                            <span class="text-[16px] font-bold leading-none ${gColor}">${mopStr}</span>
+                            
+                            <span class="text-[12px] font-medium ${gColorUSD} leading-none">${usdStr}</span>
                         </div>
-                        <span class="text-[8px] font-bold opacity-90 ${gColor}">${pctStr}</span>
+                        <span class="text-[9px] font-bold opacity-90 ${gColor}">${pctStr}</span>
                     </div>
                 `;
             } else {
                 globalTotalPnlContainer.innerHTML = `
                     <div class="flex items-center space-x-2">
                         <div class="flex flex-col items-end space-y-1">
-                            <span class="text-xs md:text-sm font-bold leading-none text-slate-500">${maskText('-', 'global_pnl_mop')}</span>
-                            <span class="text-[8px] md:text-[10px] font-medium text-slate-600 leading-none">${maskText('(-)', 'global_pnl_usd')}</span>
+                            <span class="text-[16px] font-bold leading-none text-slate-500">${maskText('-', 'global_pnl_mop')}</span>
+                            
+                            <span class="text-[12px] font-medium text-slate-600 leading-none">${maskText('(-)', 'global_pnl_usd')}</span>
                         </div>
-                        <span class="text-[8px] font-bold text-slate-600">(-)</span>
+                        <span class="text-[9px] font-bold text-slate-600">(-)</span>
                     </div>
                 `;
             }
