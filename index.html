@@ -358,6 +358,52 @@
               </div>
             </div>
             
+            <div id="sliderContainer" class="hidden flex-col space-y-1 mt-1 bg-[#1e1e1e] p-2 rounded-lg border border-[#333]">
+              <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 px-1">
+                <span>0</span>
+                <span>最高預算: <input type="number" id="budgetInput" value="10000" class="w-14 bg-transparent border-b border-dashed border-[#555] text-right text-[#2979ff] outline-none p-0" title="點擊修改預算上限"> (可修改)</span>
+              </div>
+              <input type="range" id="qtySlider" min="0" max="100" step="1" value="0" class="w-full cursor-pointer accent-[#2979ff] bg-[#2a2a2a] rounded-lg h-1.5">
+            </div>
+
+            <div id="previewAvgCostContainer" class="hidden text-[11px] text-slate-300 bg-[#2a2a2a] py-1.5 px-3 rounded-lg border border-[#444] flex justify-between items-center transition-all shadow-inner">
+              <span>總值: <span id="previewTotalValue" class="font-bold text-[#2979ff] ml-1">-</span></span>
+              <span>新均價: <span id="previewAvgCost" class="font-bold text-[#00e676] ml-1">-</span></span>
+            </div>
+            
+            <div class="flex gap-2">
+              <button type="submit" class="flex-[1.5] bg-[#2979ff] hover:bg-[#1c54b2] text-white text-xs md:text-sm font-bold py-1.5 md:py-2 rounded-lg transition-colors shadow-lg">
+                加入計算模型
+              </button>
+              <button type="button" id="btnMockRecord" class="flex-1 bg-[#2a2a2a] hover:bg-[#333] border border-[#2979ff]/40 text-[#2979ff] text-xs md:text-sm font-bold py-1.5 md:py-2 rounded-lg transition-colors shadow-lg">
+                新增模擬
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-panel p-2 md:p-3 rounded-xl flex justify-between items-center">
+          <div class="flex items-center space-x-2">
+            <span class="text-[11px] md:text-sm font-bold text-slate-300 uppercase tracking-wider">本日盈虧</span>
+            <span class="text-[9px] text-slate-500 font-normal bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700">已結算</span>
+          </div>
+          
+          <div id="dailyPnLContainer" class="flex flex-col items-end">
+             <span class="text-xs font-bold text-slate-500">-</span>
+          </div>
+        </div>
+            
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">價位</label>
+                <input id="priceInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" placeholder="先輸入價位" required>
+              </div>
+              <div>
+                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">數量 (股)</label>
+                <input id="qtyInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required disabled>
+              </div>
+            </div>
+            
             <!-- 🌟 新增的拉桿區塊 (預設隱藏) -->
             <div id="sliderContainer" class="hidden flex-col space-y-1 mt-1 bg-[#1e1e1e] p-2 rounded-lg border border-[#333]">
               <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 px-1">
@@ -1436,7 +1482,56 @@
 
         calculatePnl(visibleRecords, symAvgPrice, symCost); 
     }
+// --- 🌟 計算本日盈虧 (Realized Daily PnL) ---
+        const todayStr = getLocalDateString(); 
+        let dailyPnlUSD = 0;
+        let dailyTotalCost = 0;
 
+        tradeHistory.forEach(h => {
+            // 只有「今天」且「已填寫賣出價」的紀錄才計算
+            if (h.dateStr === todayStr && h.sellPrice != null) {
+                const fee = parseFloat(h.fee) || 0;
+                const pnl = (h.sellPrice - h.price) * h.quantity - fee;
+                dailyPnlUSD += pnl;
+                dailyTotalCost += (h.price * h.quantity);
+            }
+        });
+
+        const dailyPnLContainer = document.getElementById('dailyPnLContainer');
+        if (dailyPnLContainer) {
+            // 如果今天有賣出結算的紀錄
+            if (dailyTotalCost > 0 || dailyPnlUSD !== 0) {
+                const dColor = dailyPnlUSD >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
+                const dColorUSD = dailyPnlUSD >= 0 ? 'text-emerald-700' : 'text-rose-700';
+                const dSign = dailyPnlUSD > 0 ? '+' : '';
+                const dPct = dailyTotalCost > 0 ? (dailyPnlUSD / dailyTotalCost) * 100 : 0;
+
+                const mopStr = maskText(`${dSign}${formatNumber(dailyPnlUSD * MOP_RATE)}`, 'daily_pnl_mop');
+                const usdStr = maskText(`(${dSign}${formatNumber(dailyPnlUSD)})`, 'daily_pnl_usd');
+                const pctStr = maskText(`(${dSign}${formatNumber(dPct)}%)`, 'daily_pnl_pct');
+
+                dailyPnLContainer.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="text-[16px] font-bold leading-none ${dColor}">${mopStr}</span>
+                            <span class="text-[12px] font-medium ${dColorUSD} leading-none">${usdStr}</span>
+                        </div>
+                        <span class="text-[9px] font-bold opacity-90 ${dColor}">${pctStr}</span>
+                    </div>
+                `;
+            } else {
+                // 如果今天沒有賣出任何股票
+                dailyPnLContainer.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <div class="flex flex-col items-end space-y-1">
+                            <span class="text-[16px] font-bold leading-none text-slate-500">${maskText('-', 'daily_pnl_mop')}</span>
+                            <span class="text-[12px] font-medium text-slate-600 leading-none">${maskText('(-)', 'daily_pnl_usd')}</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-slate-600">(-)</span>
+                    </div>
+                `;
+            }
+        }
     window.commitDataChange = function(isFromCloud = false) {
       if (tradeHistory && tradeHistory.length > 0) syncDateStrWithTime(tradeHistory);
 
