@@ -685,13 +685,11 @@
              </div>
              
              <div class="flex flex-col shrink-0 pointer-events-none items-end min-w-[90px]">
-               <span class="text-[9px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
+               <span class="text-[10.5px] text-slate-400 font-bold mb-0.5">未實現總盈虧</span>
                <div id="globalTotalPnlContainer" class="flex flex-col items-end">
                   <span class="text-xs md:text-sm font-bold leading-none text-slate-500">-</span>
                </div>
              </div>
-          </div>
-        </div>
 
         <!-- 核心看板 (極限壓縮為一行 5 欄) -->
         <div class="grid grid-cols-5 gap-1 md:gap-3">
@@ -3121,10 +3119,10 @@
         aggregated[r.ticker] += pnl;
       });
 
-      // 2. 處理未實現盈虧 (當前倉位) - 新增邏輯
+      // 2. 處理未實現盈虧 (當前未平倉的部位)
       records.filter(r => !r.isHidden).forEach(r => {
         const currentPrice = (latestPrices[r.ticker] !== undefined && !isNaN(latestPrices[r.ticker])) ? latestPrices[r.ticker] : r.price;
-        const pnl = (currentPrice - r.price) * r.quantity; // 未平倉不計算賣出手續費
+        const pnl = (currentPrice - r.price) * r.quantity; 
         
         if (!aggregated[r.ticker]) aggregated[r.ticker] = 0;
         aggregated[r.ticker] += pnl;
@@ -3135,6 +3133,7 @@
       let totalProfitSum = 0;
       let totalLossSum = 0;
 
+      // 3. 分類盈利與虧損，並計算總和
       for (const ticker in aggregated) {
         if (aggregated[ticker] > 0) {
             profitList.push({ ticker, pnl: aggregated[ticker] });
@@ -3146,20 +3145,27 @@
         }
       }
 
-      // 3. 更新介面上的總計文字與切換提示
-      const detailsTotalSumContainer = document.getElementById('detailsTotalSumContainer');
-      if (detailsTotalSumContainer) {
-          if (activeDetailsFilter === 'profit') {
-              detailsTotalSumContainer.innerHTML = `總計盈利: <span class="text-[#00e676]">+${formatNumber(totalProfitSum * multiplier)}</span> <span class="text-[10px] text-slate-500 font-normal ml-1 hover:text-white transition-colors">🔄 切換虧損</span>`;
-          } else {
-              detailsTotalSumContainer.innerHTML = `總計虧損: <span class="text-[#ff5252]">${formatNumber(totalLossSum * multiplier)}</span> <span class="text-[10px] text-slate-500 font-normal ml-1 hover:text-white transition-colors">🔄 切換盈利</span>`;
-          }
-      }
-
       profitList.sort((a, b) => b.pnl - a.pnl);
       lossList.sort((a, b) => a.pnl - b.pnl);
 
       const currentList = activeDetailsFilter === 'profit' ? profitList : lossList;
+
+      // 4. 動態生成總計切換按鈕 (如果 HTML 裡還沒有，就幫你插入)
+      let detailsHeaderContainer = document.getElementById('detailsTotalSumContainer');
+      if (!detailsHeaderContainer) {
+          const headerDiv = els.detailsView.querySelector('h3').parentElement;
+          detailsHeaderContainer = document.createElement('div');
+          detailsHeaderContainer.id = 'detailsTotalSumContainer';
+          detailsHeaderContainer.className = 'cursor-pointer text-sm font-bold mb-2 transition-colors select-none mt-1';
+          detailsHeaderContainer.onclick = () => setDetailsFilter(activeDetailsFilter === 'profit' ? 'loss' : 'profit');
+          headerDiv.insertBefore(detailsHeaderContainer, els.btnFilterProfit.parentElement);
+      }
+
+      if (activeDetailsFilter === 'profit') {
+          detailsHeaderContainer.innerHTML = `總計盈利: <span class="text-[#00e676]">+${formatNumber(totalProfitSum * multiplier)}</span> <span class="text-[10px] text-slate-500 font-normal ml-1 hover:text-white transition-colors">🔄 切換虧損</span>`;
+      } else {
+          detailsHeaderContainer.innerHTML = `總計虧損: <span class="text-[#ff5252]">${formatNumber(totalLossSum * multiplier)}</span> <span class="text-[10px] text-slate-500 font-normal ml-1 hover:text-white transition-colors">🔄 切換盈利</span>`;
+      }
 
       if (currentList.length === 0) {
         els.detailsListContainer.innerHTML = `<div class="text-center text-slate-500 py-8">尚無${activeDetailsFilter === 'profit' ? '盈利' : '虧損'}紀錄</div>`;
@@ -3172,7 +3178,6 @@
         const colorClass = item.pnl > 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
         const sign = item.pnl > 0 ? '+' : '';
         
-        // 🌟 排行榜金額套用隱私遮罩
         const dispPnlStr = maskText(`${sign}${formatNumber(displayPnl)}`, 'det_pnl_' + item.ticker);
         
         let marketTag = 'US';
@@ -3950,8 +3955,8 @@
         let currentMonthStr = '';
         let htmlStr = '';
 
-        const maxRenderLimit = 50; 
-        const displayHistory = filteredHistory.slice(0, maxRenderLimit);
+        // 解除 50 筆限制，直接顯示所有資料
+        const displayHistory = filteredHistory;
 
         displayHistory.forEach((r, index) => {
           let recordDate;
@@ -3986,7 +3991,6 @@
 
           if (!isNaN(sPrice)) {
             const fee = parseFloat(r.fee) || 0;
-            // 全部統一為做多算法 (賣價 - 買價)
             const pnl = (sPrice - r.price) * r.quantity - fee;
             const pnlPct = (pnl / (r.price * r.quantity)) * 100;
             const color = pnl >= 0 ? 'text-[#00e676]' : 'text-[#ff5252]';
@@ -4003,7 +4007,6 @@
             priceDiffHtml = `<div class="flex items-center justify-center mt-0.5"><span class="text-[8px] md:text-[9px] font-bold ${color}" title="每股價差">(${dispDiff})</span></div>`;
           }
           
-          // 在隱私模式下，針對歷史賣價與手續費輸入框也作類型變更處理，掩蓋數字
           const inputType = isPrivacyMode ? 'password' : 'number';
 
           htmlStr += `
@@ -4033,16 +4036,6 @@
             </td>
           </tr>`;
         });
-        
-        if (filteredHistory.length > maxRenderLimit) {
-           htmlStr += `
-            <tr>
-              <td colspan="8" class="text-center py-3 text-[10px] text-slate-500 bg-[#1e1e1e]/50 border-t border-[#333]">
-                僅顯示最近 ${maxRenderLimit} 筆紀錄以節省效能，若要查看更早的紀錄請使用搜尋功能。
-              </td>
-            </tr>
-           `;
-        }
         
         els.historyTableBody.innerHTML = htmlStr;
       }
