@@ -293,7 +293,6 @@
       <!-- 左側：控制面板 -->
       <div class="w-full lg:w-[340px] xl:w-[380px] shrink-0 space-y-2 md:space-y-3">
         
-        <!-- API 抓價 -->
         <div class="card-panel p-2 md:p-3 rounded-xl">
           <div class="flex justify-between items-center mb-1.5 md:mb-2">
             <h2 class="text-[11px] md:text-sm font-bold uppercase tracking-wider text-white">市場報價</h2>
@@ -327,7 +326,6 @@
           </div>
         </div>
 
-        <!-- 新增買入 -->
         <div class="card-panel p-2 md:p-3 rounded-xl">
           <h2 class="text-[11px] md:text-sm font-bold uppercase tracking-wider text-white mb-2 md:mb-3 flex items-center">
             <svg class="mr-2 text-[#2979ff]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -392,44 +390,7 @@
              <span class="text-xs font-bold text-slate-500">-</span>
           </div>
         </div>
-            
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">價位</label>
-                <input id="priceInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" placeholder="先輸入價位" required>
-              </div>
-              <div>
-                <label class="block text-[10px] md:text-[11px] font-bold text-slate-200 mb-1">數量 (股)</label>
-                <input id="qtyInput" type="number" step="any" class="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold rounded-lg border border-[#444]" required disabled>
-              </div>
-            </div>
-            
-            <!-- 🌟 新增的拉桿區塊 (預設隱藏) -->
-            <div id="sliderContainer" class="hidden flex-col space-y-1 mt-1 bg-[#1e1e1e] p-2 rounded-lg border border-[#333]">
-              <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 px-1">
-                <span>0</span>
-                <span>最高預算: <input type="number" id="budgetInput" value="10000" class="w-14 bg-transparent border-b border-dashed border-[#555] text-right text-[#2979ff] outline-none p-0" title="點擊修改預算上限"> (可修改)</span>
-              </div>
-              <input type="range" id="qtySlider" min="0" max="100" step="1" value="0" class="w-full cursor-pointer accent-[#2979ff] bg-[#2a2a2a] rounded-lg h-1.5">
-            </div>
 
-            <div id="previewAvgCostContainer" class="hidden text-[11px] text-slate-300 bg-[#2a2a2a] py-1.5 px-3 rounded-lg border border-[#444] flex justify-between items-center transition-all shadow-inner">
-              <span>總值: <span id="previewTotalValue" class="font-bold text-[#2979ff] ml-1">-</span></span>
-              <span>新均價: <span id="previewAvgCost" class="font-bold text-[#00e676] ml-1">-</span></span>
-            </div>
-            
-            <div class="flex gap-2">
-              <button type="submit" class="flex-[1.5] bg-[#2979ff] hover:bg-[#1c54b2] text-white text-xs md:text-sm font-bold py-1.5 md:py-2 rounded-lg transition-colors shadow-lg">
-                加入計算模型
-              </button>
-              <button type="button" id="btnMockRecord" class="flex-1 bg-[#2a2a2a] hover:bg-[#333] border border-[#2979ff]/40 text-[#2979ff] text-xs md:text-sm font-bold py-1.5 md:py-2 rounded-lg transition-colors shadow-lg">
-                新增模擬
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- 試算工具 (包含價位提醒與波段分析) -->
         <div class="card-panel p-1.5 md:p-2 rounded-xl flex flex-col">
           <div class="flex space-x-1 bg-[#0F0F0F] p-1 rounded-lg mb-2 overflow-x-auto no-scrollbar">
             <button id="btn-tab-target" onclick="switchTab('target')" class="flex-1 min-w-max text-[12px] py-1.5 px-2 rounded-md bg-[#2979ff] text-white font-bold transition-all flex items-center justify-center gap-1">預期試算</button>
@@ -441,7 +402,6 @@
             </button>
           </div>
 
-          <!-- Tab: 預期試算 -->
           <div id="tab-target" class="space-y-2 px-1 pb-1">
             <div class="grid grid-cols-2 gap-2">
               <div>
@@ -463,7 +423,6 @@
             <div id="pnlResult" class="hidden mt-2 space-y-2"></div>
           </div>
 
-          <!-- Tab: 單筆計算 -->
           <div id="tab-single" class="hidden space-y-2 px-1 pb-1">
             <div class="grid grid-cols-2 gap-2 mb-2">
               <div class="col-span-2">
@@ -507,7 +466,6 @@
             <div id="singleResult" class="hidden mt-2 p-2 rounded-lg border border-[#555] text-sm bg-[#2a2a2a]"></div>
           </div>
           
-          <!-- Tab: 波段分析 (全新升級) -->
           <div id="tab-volatility" class="hidden space-y-2 px-1 pb-1">
             <div class="grid grid-cols-2 gap-2 border-b border-[#333] pb-2">
               <input id="volHighInput" type="number" step="any" placeholder="手動波段高點" class="w-full px-3 py-1.5 text-sm font-bold rounded-lg border border-[#444]">
@@ -577,7 +535,6 @@
             </div>
 
             <div id="candleRatioResult" class="hidden mt-3 space-y-3">
-              <!-- 柱狀數量統計 -->
               <div class="space-y-1.5">
                 <div class="text-[10px] text-center text-slate-400 font-bold tracking-widest">--- 1分K 升跌柱數量比例 ---</div>
                 <div class="grid grid-cols-3 gap-2">
@@ -604,7 +561,6 @@
                 </div>
               </div>
 
-              <!-- 買賣盤成交量動能統計 -->
               <div class="pt-2 border-t border-[#444] space-y-1.5">
                 <div class="flex justify-between items-center text-[9px] text-slate-400 font-bold px-1">
                   <span>買盤動能 (多)</span>
@@ -625,7 +581,6 @@
             </div>
           </div>
 
-          <!-- Tab: 智能止損 -->
           <div id="tab-stoploss" class="hidden space-y-2 px-1 pb-1">
             <button type="button" id="btnCalcStopLoss" class="w-full bg-[#2a2a2a] hover:bg-[#333] border border-[#f59e0b]/50 text-[#f59e0b] text-[11px] font-bold py-1.5 rounded-lg transition-colors">
                 🛡️ 計算推薦止損位 (ATR & 前波)
@@ -651,7 +606,6 @@
             </div>
           </div>
 
-          <!-- Tab: 價位提醒 -->
           <div id="tab-alert" class="hidden space-y-2 px-1 pb-1">
             <div class="flex justify-between items-center mb-2">
               <div class="flex items-center space-x-2">
